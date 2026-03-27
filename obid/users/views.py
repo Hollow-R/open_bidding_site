@@ -40,7 +40,7 @@ def login_view(request):
     return render(request, "users/login.html")
 
 
-# Home
+# Home (geçici)
 @login_required
 def home_view(request):
     return render(request, "users/home.html")
