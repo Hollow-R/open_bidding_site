@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+from auctions.models import Auction
 
 # Register
 def register_view(request):
@@ -25,6 +27,10 @@ def register_view(request):
 
 # Login
 def login_view(request):
+
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == "POST":
         username = request.POST['username']
         password = request.POST['password']
@@ -32,15 +38,22 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('home')
+            return redirect('dashboard')
         else:
             messages.error(request, "Invalid credentials")
             return redirect('login')
 
     return render(request, "users/login.html")
 
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 
-# Home (geçici)
 @login_required
 def home_view(request):
-    return render(request, "users/home.html")
+#    if request.user.is_superuser:
+#       auctions = Auction.objects.all().order_by('-created_at')
+#        return render(request, 'users/admin_dashboard.html', {'auctions': auctions})
+#    else:
+        auctions = Auction.objects.filter(active=True).order_by('-created_at')
+        return render(request, 'users/dashboard.html', {'auctions': auctions})

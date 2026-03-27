@@ -1,0 +1,62 @@
+{% extends 'users/base.html' %}
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/23.1.6/css/dx.light.css" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn3.devexpress.com/jslib/23.1.6/js/dx.all.js"></script>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>İhale Listesi</h2>
+        <a href="#" class="btn btn-success">Yeni İhale Oluştur</a>
+    </div>
+    <hr>
+    
+    <div id="gridContainer"></div>
+</div>
+
+<script>
+    $(function() {
+        $("#gridContainer").dxDataGrid({
+
+            dataSource: "/auctions/api/tenders/",
+            keyExpr: "id",
+            remoteOperations: false,
+            showBorders: true,
+            
+            searchPanel: { visible: true, width: 240, placeholder: "Ara..." },
+            filterRow: { visible: true },
+            sorting: { mode: "multiple" },
+            paging: { pageSize: 10 },
+            pager: {
+                showPageSizeSelector: true,
+                allowedPageSizes: [5, 10, 20],
+                showInfo: true
+            },
+
+            columns: [
+                { dataField: "id", caption: "ID", width: 50 },
+                { dataField: "title", caption: "İhale Başlığı" },
+                { 
+                    dataField: "starting_price", 
+                    caption: "Başlangıç Fiyatı", 
+                    format: { type: "currency", currency: "TRY" } 
+                },
+                { dataField: "owner_name", caption: "Açan Kurum/Kişi" },
+                { dataField: "active", caption: "Aktif mi?", dataType: "boolean" },
+                {
+                    type: "buttons",
+                    caption: "İşlem",
+                    buttons: [{
+                        text: "Teklif Ver",
+                        icon: "money",
+                        onClick: function(e) {
+                            window.location.href = "/auctions/" + e.row.data.id + "/";
+                        }
+                    }]
+                }
+            ]
+        });
+    });
+</script>
+{% endblock %}

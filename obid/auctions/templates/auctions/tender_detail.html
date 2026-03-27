@@ -1,0 +1,60 @@
+{% extends 'users/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="card-title">{{ auction.title }}</h2>
+                <p class="text-muted">İhale Sahibi: {{ auction.owner.username }}</p>
+                <hr>
+                <p class="lead">{{ auction.description }}</p>
+                <div class="alert alert-info">
+                    <strong>Başlangıç Fiyatı:</strong> {{ auction.starting_price }} TL<br>
+                    <strong>Güncel En Yüksek Teklif:</strong> {{ auction.current_price }} TL
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-primary">
+            <div class="card-header bg-primary text-white">Teklif Ver</div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} small">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if auction.active %}
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Yeni Teklif Tutarı</label>
+                            {{ form.amount }} <div class="form-text">Mevcut: {{ auction.current_price }} TL</div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Teklifi Gönder</button>
+                    </form>
+                {% else %}
+                    <div class="alert alert-secondary">Bu ihale tekliflere kapalıdır.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h5>Son Teklifler</h5>
+            <ul class="list-group">
+                {% for bid in bids %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ bid.user.username }}</span>
+                        <strong>{{ bid.amount }} TL</strong>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item text-muted text-center">Henüz teklif yok.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
