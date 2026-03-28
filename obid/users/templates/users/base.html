@@ -9,7 +9,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">Obid İhale</a>
+            <a class="navbar-brand" href="{% url 'login' %}">Obid İhale</a>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
                     {% for menu in user_menus %}
@@ -20,7 +20,7 @@
                 </ul>
                 <div class="navbar-nav">
                     {% if user.is_authenticated %}
-                        <span class="nav-link text-light">Hoş geldin, {{ user.username }}</span>
+                        <span class="nav-link text-light">{{ user.username }}</span>
                         <a class="nav-link" href="{% url 'logout' %}">Çıkış Yap</a>
                     {% else %}
                         {% if request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}

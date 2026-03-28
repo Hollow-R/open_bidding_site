@@ -1,69 +1,117 @@
 {% extends 'users/base.html' %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark">Sistem Yönetim Paneli</h2>
-        <a href="{% url 'auctions:create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Yeni İhale Ekle
-        </a>
-    </div>
+<link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/23.2.3/css/dx.light.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn3.devexpress.com/jslib/23.2.3/js/dx.all.js"></script>
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body">
-            <div id="adminGrid"></div>
+<style>
+    .sidebar { min-height: 100vh; background: #212529; color: white; padding-top: 20px; }
+    .sidebar a { color: #adb5bd; text-decoration: none; display: block; padding: 12px 20px; border-left: 3px solid transparent; }
+    .sidebar a:hover, .sidebar a.active { background: #343a40; color: white; border-left-color: #0d6efd; }
+    .main-content { background: #f8f9fa; padding: 25px; }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <div class="col-md-2 sidebar shadow">
+            <h5 class="px-4 mb-4 fw-bold text-white text-uppercase small" style="letter-spacing: 1px;">Yönetim</h5>
+            <a href="#" class="active"><i class="bi bi-hammer me-2"></i> İhaleler</a>
+            <a href="#"><i class="bi bi-people me-2"></i> Kullanıcılar</a>
+        </div>
+
+        <div class="col-md-10 main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold m-0">İhale Yönetimi</h2>
+                <a href="{% url 'auctions:create' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
+                    <i class="bi bi-plus-lg me-2"></i>Yeni İhale
+                </a>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-1">
+                    <div id="masterGrid"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    $(function() {
-        const auctionData = [
-            {% for a in auctions %}
-            {
-                id: {{ a.id }},
-                title: "{{ a.title|escapejs }}",
-                owner: "{{ a.owner.username }}",
-                price: {{ a.current_price }},
-                end_time: "{{ a.end_time|date:'Y-m-d H:i' }}",
-                is_active: {{ a.active|yesno:"true,false" }}
-            },
-            {% endfor %}
-        ];
+$(function() {
+    // Verileri güvenli şekilde al
+    const auctions = JSON.parse('{{ auctions_json|safe }}');
+    const allBids = JSON.parse('{{ bids_json|safe }}');
 
-        $("#adminGrid").dxDataGrid({
-            dataSource: auctionData,
-            showBorders: true,
-            filterRow: { visible: true }, // Filtreleme satırı
-            searchPanel: { visible: true }, // Arama çubuğu
-            paging: { pageSize: 10 }, // Sayfalama
-            columns: [
-                { dataField: "id", caption: "ID", width: 50 },
-                { dataField: "title", caption: "İhale Başlığı" },
-                { dataField: "owner", caption: "Oluşturan" },
-                { dataField: "price", caption: "Güncel Fiyat", dataType: "number", format: "fixedPoint" },
-                { dataField: "end_time", caption: "Bitiş Tarihi", dataType: "datetime" },
-                { 
-                    dataField: "is_active", 
-                    caption: "Durum",
-                    cellTemplate: function(container, options) {
-                        const badgeClass = options.value ? "bg-success" : "bg-danger";
-                        const text = options.value ? "Aktif" : "Pasif";
-                        $("<span class='badge " + badgeClass + "'>").text(text).appendTo(container);
-                    }
-                },
-                {
-                    type: "buttons",
-                    buttons: [{
-                        hint: "Düzenle",
-                        icon: "edit",
-                        onClick: function(e) {
-                            window.location.href = "/auctions/edit/" + e.row.data.id + "/";
-                        }
-                    }]
+    $("#masterGrid").dxDataGrid({
+        dataSource: auctions,
+        keyExpr: "id",
+        showBorders: true,
+        columnAutoWidth: true,
+        searchPanel: { visible: true },
+        paging: { pageSize: 12 },
+        masterDetail: {
+            enabled: true,
+            template: function(container, options) {
+                const currentAuctionId = options.data.id;
+                const auctionBids = allBids.filter(b => b.auction_id === currentAuctionId);
+
+                $("<div>")
+                    .addClass("p-3 bg-light border-start border-primary border-4")
+                    .append("<h6 class='fw-bold mb-3 text-primary'>Bu İhaleye Gelen Teklifler</h6>")
+                    .append($("<div>").dxDataGrid({
+                        dataSource: auctionBids,
+                        columns: [
+                            { dataField: "user__username", caption: "Teklif Veren" },
+                            { dataField: "amount", caption: "Miktar", format: "currency" },
+                            { dataField: "created_at", caption: "Zaman", dataType: "datetime", format: "dd/MM HH:mm" }
+                        ]
+                    }))
+                    .appendTo(container);
+            }
+        },
+        columns: [
+            { dataField: "id", caption: "ID", width: 70 },
+            { dataField: "title", caption: "İhale Başlığı" },
+            { dataField: "current_price", caption: "Son Fiyat", format: "currency" },
+            { 
+                dataField: "active", 
+                caption: "Durum", 
+                width: 100,
+                cellTemplate: function(container, options) {
+                    const badgeClass = options.value ? "bg-success" : "bg-danger";
+                    const text = options.value ? "Aktif" : "Pasif";
+                    $("<span class='badge " + badgeClass + "'>").text(text).appendTo(container);
                 }
-            ]
-        });
-    });
+            },
+            {
+                type: "buttons",
+                width: 110,
+                buttons: [
+                    {
+                        hint: "İhaleyi Sil",
+                        icon: "trash",
+                        onClick: function(e) {
+                            if(confirm("Bu ihaleyi ve tüm tekliflerini silmek istediğinize emin misiniz?")) {
+                                $.ajax({
+                                    url: "/auctions/delete/" + e.row.data.id + "/",
+                                    type: "POST",
+                                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                                    success: function(res) {
+                                        if(res.success) {
+                                            location.reload(); 
+                                        } else {
+                                            alert("Hata: " + res.error);
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    }
+                ]
+            }
+        ] // Columns burada bitti
+    }); // dxDataGrid burada bitti
+}); // Document Ready burada bitti
 </script>
 {% endblock %}

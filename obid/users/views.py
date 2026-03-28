@@ -4,7 +4,9 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
-from auctions.models import Auction
+from auctions.models import Auction, Bid
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 # Register
 def register_view(request):
@@ -51,9 +53,19 @@ def logout_view(request):
 
 @login_required
 def home_view(request):
-#    if request.user.is_superuser:
-#       auctions = Auction.objects.all().order_by('-created_at')
-#        return render(request, 'users/admin_dashboard.html', {'auctions': auctions})
-#    else:
+    if request.user.is_superuser:
+        auctions_list = list(Auction.objects.all().values(
+            'id', 'title', 'owner__username', 'current_price', 'end_time', 'active'))
+        
+        bids_list = list(Bid.objects.all().values(
+            'id', 'auction_id', 'user__username', 'amount', 'created_at'
+        ))
+
+        context = {
+            'auctions_json': json.dumps(auctions_list, cls=DjangoJSONEncoder),
+            'bids_json': json.dumps(bids_list, cls=DjangoJSONEncoder),
+        }
+        return render(request, 'users/admin_dashboard.html', context)
+    else:
         auctions = Auction.objects.filter(active=True).order_by('-created_at')
         return render(request, 'users/dashboard.html', {'auctions': auctions})

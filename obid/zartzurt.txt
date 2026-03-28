@@ -1,0 +1,114 @@
+Online İhale / Bidding Sitesi
+
+Amaç
+Kurumun ihale açabildiği, satıcıların teklif verebildiği, yetkili kullanıcıların teklifleri görebildiği basit bir web uygulaması geliştirilmesi.
+
+Zorunlu Teknik Şartlar
+
+Backend: Python 3.8
+Framework: Django
+API: Django REST Framework
+Arayüz: Bootstrap
+En az 1 ekranda DevExtreme DataGrid
+Kimlik doğrulama: OAuth ile giriş
+Yönetim paneli: Django Admin
+Kullanıcılar grup bazlı çalışacak
+Grup bazlı menü yetkilendirmesi olacak
+
+Kullanıcı Grupları
+Admin
+İhale Yetkilisi
+Satıcı
+
+Grup Bazlı Menü Yetkisi
+Sistemde menüler veritabanında tanımlı olacak.
+Her grup için hangi menülerin görüneceği belirlenecek.
+Örnek:
+Admin: Kullanıcı Yönetimi, Grup Yönetimi, Menü Yetkileri, Tüm İhaleler
+İhale Yetkilisi: İhale Oluştur, İhale Listesi, Teklif Değerlendirme
+Satıcı: Açık İhaleler, Teklif Ver, Tekliflerim
+
+Temel Modüller
+Login / OAuth
+Kullanıcı sisteme OAuth ile giriş yapar.
+Kullanıcı Yönetimi
+Kullanıcı ekleme, düzenleme, aktif/pasif yapma
+Kullanıcının grubunu belirleme
+Grup Yönetimi
+Grup ekleme, düzenleme
+Grup bazlı menü yetkisi verme
+
+Menü Yönetimi
+Menü adı
+route / URL
+parent menu
+sıralama
+aktif/pasif
+İhale Yönetimi
+İhale oluşturma
+İhale listeleme
+İhale detay görüntüleme
+İhaleyi yayına alma / kapatma
+
+Teklif Yönetimi
+Satıcının ihaleye teklif verebilmesi
+Kendi tekliflerini görebilmesi
+Teklif güncelleme
+Sonuçlandırma
+İhale yetkilisinin gelen teklifleri görmesi
+Kazanan teklifi seçmesi
+
+Django Admin
+Kullanıcı
+Grup
+Menü
+İhale
+Teklif kayıtlarının admin panelden yönetilmesi
+
+Zorunlu Ekranlar
+Login
+Dashboard
+İhale Listesi
+İhale Oluştur
+İhale Detay
+Teklif Ver
+Tekliflerim
+Kullanıcı Listesi
+Grup Listesi
+Menü Yetki Ekranı
+
+DevExtreme Grid Zorunluluğu
+En az 1 adet DevExtreme DataGrid kullanılacak.
+En uygun ekran: İhale Listesi
+Grid’de en az:
+arama
+filtreleme
+sıralama
+sayfalama
+olmalı.
+
+Temel İş Kuralları
+Yayında olmayan ihaleye teklif verilemez.
+Süresi biten ihaleye teklif verilemez.
+Satıcı sadece kendi tekliflerini görebilir.
+İhale yetkilisi sadece kendi açtığı ihaleleri yönetebilir.
+Admin tüm kayıtları görebilir.
+Kullanıcı sadece grubuna açık menüleri görür.
+Menü görünse bile backend tarafında ayrıca yetki kontrolü yapılmalıdır.
+
+Beklenen Veritabanı Yapısı
+Minimum olarak şu tablolar beklenir:
+users
+groups
+user_groups
+menus
+group_menu_permissions
+tenders
+bids
+
+Teslim Beklentisi
+Çalışan kaynak kod
+Kurulum dokümanı
+Kullanılan paketler listesi
+Demo kullanıcılar
+Demo ihale ve teklif verileri
