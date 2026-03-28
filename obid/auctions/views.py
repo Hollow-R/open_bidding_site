@@ -2,13 +2,16 @@ from django.shortcuts import render
 from users.decorators import menu_permission_required
 from rest_framework import viewsets
 from .serializers import AuctionSerializer
-from .models import Auction
+from .models import Auction, Bid
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .forms import BidForm, AuctionForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import user_passes_test
+import json
+from django.http import JsonResponse
+
 
 class AuctionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Auction.objects.all().order_by('-created_at')
@@ -75,3 +78,44 @@ def delete_auction(request, auction_id):
         return JsonResponse({'success': True})
     except Auction.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'İhale bulunamadı.'})
+    
+
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def update_auction(request, auction_id):
+    try:
+        auction = Auction.objects.get(id=auction_id)
+        # JS'den gelen ham veriyi alıyoruz
+        data = json.loads(request.body) 
+        
+        # Sadece gelen alanları güncelle (Mutlak Güç!)
+        if 'title' in data: auction.title = data['title']
+        if 'description' in data: auction.description = data['description']
+        if 'active' in data: auction.active = data['active']
+        if 'end_time' in data: auction.end_time = data['end_time']
+        
+        auction.save()
+        return JsonResponse({'success': True})
+    except Auction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'İhale bulunamadı.'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+    
+@user_passes_test(lambda u: u.is_superuser)
+@require_POST
+def delete_bid(request, bid_id):
+    try:
+        bid = Bid.objects.get(id=bid_id)
+        auction = bid.auction
+        bid.delete()
+
+        highest_bid = auction.bids.order_by('-amount').first()
+        if highest_bid:
+            auction.current_price = highest_bid.amount
+        else:
+            auction.current_price = auction.starting_price
+        auction.save()
+
+        return JsonResponse({'success': True})
+    except Bid.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Bid bulunamadı.'})

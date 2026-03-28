@@ -55,7 +55,7 @@ def logout_view(request):
 def home_view(request):
     if request.user.is_superuser:
         auctions_list = list(Auction.objects.all().values(
-            'id', 'title', 'owner__username', 'current_price', 'end_time', 'active'))
+            'id', 'title', "description", 'owner__username', 'current_price', "created_at", 'end_time', 'active'))
         
         bids_list = list(Bid.objects.all().values(
             'id', 'auction_id', 'user__username', 'amount', 'created_at'

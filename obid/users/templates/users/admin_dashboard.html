@@ -39,7 +39,6 @@
 
 <script>
 $(function() {
-    // Verileri güvenli şekilde al
     const auctions = JSON.parse('{{ auctions_json|safe }}');
     const allBids = JSON.parse('{{ bids_json|safe }}');
 
@@ -49,7 +48,13 @@ $(function() {
         showBorders: true,
         columnAutoWidth: true,
         searchPanel: { visible: true },
-        paging: { pageSize: 12 },
+        editing: {
+            mode: "popup", // Düzenleme pencere şeklinde açılsın
+            allowUpdating: true,
+            allowDeleting: true,
+            useIcons: true,
+            texts: { confirmDeleteMessage: "Bu ihaleyi silmek istediğinize emin misiniz?" }
+        },
         masterDetail: {
             enabled: true,
             template: function(container, options) {
@@ -58,60 +63,93 @@ $(function() {
 
                 $("<div>")
                     .addClass("p-3 bg-light border-start border-primary border-4")
-                    .append("<h6 class='fw-bold mb-3 text-primary'>Bu İhaleye Gelen Teklifler</h6>")
+                    .append("<h6 class='fw-bold mb-3 text-primary'>Teklif Yönetimi</h6>")
                     .append($("<div>").dxDataGrid({
                         dataSource: auctionBids,
                         columns: [
-                            { dataField: "user__username", caption: "Teklif Veren" },
+                            { dataField: "user__username", caption: "Teklif Veren", allowEditing: false },
                             { dataField: "amount", caption: "Miktar", format: "currency" },
-                            { dataField: "created_at", caption: "Zaman", dataType: "datetime", format: "dd/MM HH:mm" }
+                            { dataField: "created_at", caption: "Zaman", dataType: "datetime" },
+                            {
+                                type: "buttons",
+                                buttons: [{
+                                    icon: "trash",
+                                    hint: "Teklifi Sil",
+                                    onClick: function(e) {
+                                        if(confirm("Bu teklifi silmek istediğinize emin misiniz?")) {
+                                            $.ajax({
+                                                url: "/auctions/bid/delete/" + e.row.data.id + "/",
+                                                type: "POST",
+                                                headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                                                success: function(res) {
+                                                    if (res.success) {
+                                                        const deletedId = e.row.data.id;
+                                                        const auctionIndex = auctionBids.findIndex(b => b.id === deletedId);
+                                                        if (auctionIndex !== -1) auctionBids.splice(auctionIndex, 1);
+
+                                                        const allIndex = allBids.findIndex(b => b.id === deletedId);
+                                                        if (allIndex !== -1) allBids.splice(allIndex, 1);
+                                                        
+                                                        e.component.refresh();
+                                                    } else {
+                                                        alert("Silme hatası: " + res.error);
+                                                    }
+                                                },
+                                                error: function() {
+                                                    alert("Sunucuya bağlanılamadı.");
+                                                }
+                                            });
+                                        }
+                                    }
+                                }]
+                            }
                         ]
                     }))
                     .appendTo(container);
             }
         },
         columns: [
-            { dataField: "id", caption: "ID", width: 70 },
-            { dataField: "title", caption: "İhale Başlığı" },
-            { dataField: "current_price", caption: "Son Fiyat", format: "currency" },
-            { 
-                dataField: "active", 
-                caption: "Durum", 
-                width: 100,
-                cellTemplate: function(container, options) {
-                    const badgeClass = options.value ? "bg-success" : "bg-danger";
-                    const text = options.value ? "Aktif" : "Pasif";
-                    $("<span class='badge " + badgeClass + "'>").text(text).appendTo(container);
-                }
-            },
-            {
-                type: "buttons",
-                width: 110,
-                buttons: [
-                    {
-                        hint: "İhaleyi Sil",
-                        icon: "trash",
-                        onClick: function(e) {
-                            if(confirm("Bu ihaleyi ve tüm tekliflerini silmek istediğinize emin misiniz?")) {
-                                $.ajax({
-                                    url: "/auctions/delete/" + e.row.data.id + "/",
-                                    type: "POST",
-                                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
-                                    success: function(res) {
-                                        if(res.success) {
-                                            location.reload(); 
-                                        } else {
-                                            alert("Hata: " + res.error);
-                                        }
-                                    }
-                                });
+            { dataField: "id", caption: "ID", width: 50, allowEditing: false },
+            { dataField: "owner__username", caption: "Sahibi", width: 120, allowEditing: false },
+            { dataField: "title", caption: "İhale Başlığı", validationRules: [{ type: "required" }] },
+            { dataField: "description", caption: "Açıklama", visible: false, editCellTemplate: function(container, cellInfo) {
+                return $("<textarea>").addClass("dx-texteditor-input").val(cellInfo.value).on("change", function(e) {
+                    cellInfo.setValue($(this).val());
+                });
+            }},
+            { dataField: "current_price", caption: "Fiyat", format: "currency", allowEditing: false },
+            { dataField: "created_at", caption: "Başlatılma", dataType: "datetime", format: "dd/MM/yy HH:mm", allowEditing: false },
+            { dataField: "end_time", caption: "Bitiş Tarihi", dataType: "datetime", format: "dd/MM/yy HH:mm" },
+            { dataField: "active", caption: "Aktif mi?", dataType: "boolean", width: 80 }
+        ],
+        onRowUpdating: function(e) {
+                const deferred = $.Deferred(); // Grid'in işlem sonucunu beklemesi için
+                    const auctionId = e.key;
+                    const updatedData = e.newData;
+
+                    $.ajax({
+                        url: "/auctions/update/" + auctionId + "/",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify(updatedData),
+                        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                        success: function(res) {
+                            if(res.success) {
+                                deferred.resolve(); // Başarılıysa hücreyi güncelle
+                            } else {
+                                alert("Güncelleme Hatası: " + res.error);
+                                deferred.reject(); // Başarısızsa değişikliği geri al
                             }
+                        },
+                        error: function() {
+                            alert("Sunucuya bağlanılamadı.");
+                            deferred.reject();
                         }
-                    }
-                ]
-            }
-        ] // Columns burada bitti
-    }); // dxDataGrid burada bitti
-}); // Document Ready burada bitti
+                    });
+
+                    e.cancel = deferred.promise(); // İşlem bitene kadar grid'i "bekle" moduna alır
+                        }
+    });
+});
 </script>
 {% endblock %}
