@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Auction(models.Model):
 
@@ -25,6 +26,27 @@ class Auction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
     end_time = models.DateTimeField(null=True, blank=True)
+
+    def expire_if_needed(self):
+        if self.active and self.end_time and timezone.now() > self.end_time:
+            highest_bid = self.bids.order_by('-amount').first()
+            self.winner = highest_bid.user if highest_bid else None
+            self.active = False
+            self.save(update_fields=['active', 'winner'])
+            return True
+        return False
+
+    @classmethod
+    def expire_overdue(cls):
+        expired_auctions = cls.objects.filter(active=True, end_time__isnull=False, end_time__lt=timezone.now()).prefetch_related('bids')
+        updated_count = 0
+        for auction in expired_auctions:
+            highest_bid = auction.bids.order_by('-amount').first()
+            auction.winner = highest_bid.user if highest_bid else None
+            auction.active = False
+            auction.save(update_fields=['active', 'winner'])
+            updated_count += 1
+        return updated_count
 
     class Meta:
         verbose_name = "İhale"

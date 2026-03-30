@@ -9,21 +9,30 @@ from .forms import BidForm, AuctionForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import user_passes_test, login_required
+from django.utils import timezone
 import json
 from django.http import JsonResponse
 
 
-class AuctionViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Auction.objects.all().order_by('-created_at')
+class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
     serializer_class = AuctionSerializer
+
+    def get_queryset(self):
+        Auction.expire_overdue()
+        return Auction.objects.all().order_by('-created_at')
 
 @menu_permission_required('auctions:list')
 def tender_detail(request, pk):
     auction = get_object_or_404(Auction, pk=pk)
-    
+    if auction.end_time and auction.active and timezone.now() > auction.end_time:
+        auction.active = False
+        auction.save(update_fields=['active'])
+
     if request.method == "POST":
         form = BidForm(request.POST, auction=auction)
-        if form.is_valid():
+        if not auction.active:
+            messages.error(request, "Bu ihale bitmiş olduğu için artık teklif kabul etmiyor.")
+        elif form.is_valid():
             # Formdan gelen temiz veriyi al ama hemen kaydetme (user eklememiz lazım)
             bid = form.save(commit=False)
             bid.user = request.user
@@ -62,7 +71,7 @@ def create_auction(request):
             auction.owner = request.user # İhaleyi sisteme giren kişi sahibi olur
             auction.current_price = auction.starting_price # Başlangıç fiyatı güncel fiyattır
             auction.save()
-            return redirect('dashboard') # Başarılıysa dashboard'a dön
+            return redirect('users:dashboard') # Başarılıysa dashboard'a dön
     else:
         form = AuctionForm()
     

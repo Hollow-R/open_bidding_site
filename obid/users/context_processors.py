@@ -18,6 +18,15 @@ def user_menu_permissions(request):
             parent_menu__isnull=True # Ana menüler
         ).distinct().order_by('order')
         
-        return {'user_menus': menus}
+        # Aynı zamanda izin verilen menu url_name değerlerini template'e ver
+        allowed_menu_names = GroupMenuPermission.objects.filter(
+            group__in=user_groups,
+            can_view=True
+        ).values_list('menu__url_name', flat=True)
+
+        return {
+            'user_menus': menus,
+            'user_menu_names': list(allowed_menu_names)
+        }
     
     return {'user_menus': []}

@@ -7,7 +7,7 @@ def menu_permission_required(url_name):
         def _wrapped_view(request, *args, **kwargs):
             # 1. Giriş yapmamışsa login'e at
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('users:login')
             
             # 2. Kullanıcının gruplarının bu URL'ye yetkisi var mı?
             user_groups = request.user.groups.all()
@@ -22,6 +22,6 @@ def menu_permission_required(url_name):
                 return view_func(request, *args, **kwargs)
             else:
                 messages.error(request, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")
-                return redirect('dashboard')
+                return redirect('users:dashboard')
         return _wrapped_view
     return decorator

@@ -58,8 +58,11 @@ def logout_view(request):
 @login_required
 def home_view(request):
     if request.user.is_superuser:
+        # Süresi geçen ihaleleri devre dışı bırak
+        Auction.expire_overdue()
+
         # Admin verileri...
-        auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', "created_at", 'end_time', 'active'))
+        auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
         bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
         groups_list = list(Group.objects.all().values('id', 'name'))
         menus_list = list(Menu.objects.filter(is_active=True).values('id', 'title', 'parent_menu__title'))
@@ -75,6 +78,7 @@ def home_view(request):
         return render(request, 'users/admin_dashboard.html', context)
     else:
         # Normal kullanıcı (Aktif İhaleler)
+        Auction.expire_overdue()
         auctions = Auction.objects.filter(active=True).order_by('-created_at')
         return render(request, 'users/dashboard.html', {'auctions': auctions})
     

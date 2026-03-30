@@ -142,6 +142,7 @@ $(function() {
         columns: [
             { dataField: "id", caption: "ID", width: 50, allowEditing: false },
             { dataField: "owner__username", caption: "Sahibi", width: 120, allowEditing: false },
+            { dataField: "winner__username", caption: "Kazanan", width: 140, allowEditing: false },
             { dataField: "title", caption: "İhale Başlığı", validationRules: [{ type: "required" }] },
             { dataField: "description", caption: "Açıklama", visible: false, editCellTemplate: function(container, cellInfo) {
                 return $("<textarea>").addClass("dx-texteditor-input").val(cellInfo.value).on("change", function(e) {
@@ -179,7 +180,28 @@ $(function() {
                 });
 
                 e.cancel = deferred.promise(); // İşlem bitene kadar grid'i "bekle" moduna alır
+                },
+        onRowRemoving: function(e) {
+            const deferred = $.Deferred();
+            $.ajax({
+                url: "/auctions/delete/" + e.key + "/",
+                type: "POST",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(res) {
+                    if (res.success) {
+                        deferred.resolve();
+                    } else {
+                        alert("Silme hatası: " + res.error);
+                        deferred.reject();
+                    }
+                },
+                error: function() {
+                    alert("Sunucuya bağlanılamadı.");
+                    deferred.reject();
                 }
+            });
+            e.cancel = deferred.promise();
+        }
     });
     $("#groupGrid").dxDataGrid({
         dataSource: groups,
