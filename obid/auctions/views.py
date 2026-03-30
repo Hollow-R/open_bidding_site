@@ -8,7 +8,7 @@ from django.contrib import messages
 from .forms import BidForm, AuctionForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 import json
 from django.http import JsonResponse
 
@@ -67,6 +67,12 @@ def create_auction(request):
         form = AuctionForm()
     
     return render(request, 'auctions/create_auction.html', {'form': form})
+
+@login_required # En üste eklemeyi unutma: from django.contrib.auth.decorators import login_required
+def my_bids(request):
+    # Kullanıcının verdiği teklifleri, en yüksek tutardan başlayarak getiriyoruz
+    user_bids = Bid.objects.filter(user=request.user).select_related('auction').order_by('-amount')
+    return render(request, 'auctions/my_bids.html', {'bids': user_bids})
 
 
 @user_passes_test(lambda u: u.is_superuser)

@@ -24,10 +24,10 @@
                         <label class="form-label">Şifre:</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100" href="{%url 'dashboard'}">Giriş Yap</button>
+                    <button type="submit" class="btn btn-primary w-100" href="{%url 'users:dashboard'}">Giriş Yap</button>
                 </form>
                 <div class="mt-3 text-center">
-                    Hesabınız yok mu? <a href="{% url 'register' %}">Kayıt Ol</a>
+                    Hesabınız yok mu? <a href="{% url 'users:register' %}">Kayıt Ol</a>
                 </div>
             </div>
         </div>

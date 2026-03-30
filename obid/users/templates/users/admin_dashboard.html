@@ -7,49 +7,80 @@
 
 <style>
     .sidebar { min-height: 100vh; background: #212529; color: white; padding-top: 20px; }
-    .sidebar a { color: #adb5bd; text-decoration: none; display: block; padding: 12px 20px; border-left: 3px solid transparent; }
+    .sidebar a { color: #adb5bd; text-decoration: none; display: block; padding: 12px 20px; border-left: 3px solid transparent; cursor: pointer; }
     .sidebar a:hover, .sidebar a.active { background: #343a40; color: white; border-left-color: #0d6efd; }
     .main-content { background: #f8f9fa; padding: 25px; }
+    /* Gizleme Sınıfı */
+    .content-section { display: none; }
+    .content-section.active-section { display: block; }
 </style>
 
 <div class="container-fluid p-0">
     <div class="row g-0">
         <div class="col-md-2 sidebar shadow">
             <h5 class="px-4 mb-4 fw-bold text-white text-uppercase small" style="letter-spacing: 1px;">Yönetim</h5>
-            <a href="#" class="active"><i class="bi bi-hammer me-2"></i> İhaleler</a>
-            <a href="#"><i class="bi bi-people me-2"></i> Kullanıcılar</a>
+            <a data-target="section-auctions" class="nav-link active"><i class="bi bi-hammer me-2"></i> İhaleler</a>
+            <a data-target="section-users" class="nav-link"><i class="bi bi-people me-2"></i> Kullanıcılar</a>
+            <a data-target="section-groups" class="nav-link"><i class="bi bi-shield-lock me-2"></i> Grup & Yetkiler</a>
         </div>
 
         <div class="col-md-10 main-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="fw-bold m-0">İhale Yönetimi</h2>
-                <a href="{% url 'auctions:create' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
-                    <i class="bi bi-plus-lg me-2"></i>Yeni İhale
-                </a>
-            </div>
-
-            <div class="card shadow-sm border-0 rounded-3">
-                <div class="card-body p-1">
-                    <div id="masterGrid"></div>
+            <div id="section-auctions" class="content-section active-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold m-0">İhale Yönetimi</h2>
+                    <a href="{% url 'auctions:create' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
+                        <i class="bi bi-plus-lg me-2"></i>Yeni İhale
+                    </a>
+                </div>
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-body p-1"><div id="masterGrid"></div></div>
                 </div>
             </div>
+
+            <div id="section-users" class="content-section">
+                <h2 class="fw-bold mb-4">Kullanıcı Yönetimi</h2>
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-body p-1"><div id="usersGrid"></div></div>
+                </div>
+            </div>
+
+            <div id="section-groups" class="content-section">
+                <h2 class="fw-bold mb-4">Grup ve Menü Yetkileri</h2>
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-body p-1"><div id="groupGrid"></div></div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
 $(function() {
+    $(".sidebar a.nav-link").click(function(e) {
+        e.preventDefault();
+        $(".sidebar a.nav-link").removeClass("active");
+        $(this).addClass("active");
+        
+        const targetId = $(this).attr("data-target");
+        $(".content-section").removeClass("active-section");
+        $("#" + targetId).addClass("active-section");
+    });
+
     const auctions = JSON.parse('{{ auctions_json|safe }}');
     const allBids = JSON.parse('{{ bids_json|safe }}');
+    const groups = JSON.parse('{{ groups_json|safe|escapejs }}' || '[]');
+    const menus = JSON.parse('{{ menus_json|safe|escapejs }}' || '[]');
+    const perms = JSON.parse('{{ perms_json|safe|escapejs }}' || '[]');
 
-    $("#masterGrid").dxDataGrid({
+    $("#masterGrid").dxDataGrid({ //İhale ve Bid
         dataSource: auctions,
         keyExpr: "id",
         showBorders: true,
         columnAutoWidth: true,
         searchPanel: { visible: true },
         editing: {
-            mode: "popup", // Düzenleme pencere şeklinde açılsın
+            mode: "popup",
             allowUpdating: true,
             allowDeleting: true,
             useIcons: true,
@@ -124,10 +155,10 @@ $(function() {
         ],
         onRowUpdating: function(e) {
                 const deferred = $.Deferred(); // Grid'in işlem sonucunu beklemesi için
-                    const auctionId = e.key;
-                    const updatedData = e.newData;
+                const auctionId = e.key;
+                const updatedData = e.newData;
 
-                    $.ajax({
+                $.ajax({
                         url: "/auctions/update/" + auctionId + "/",
                         type: "POST",
                         contentType: "application/json",
@@ -145,10 +176,128 @@ $(function() {
                             alert("Sunucuya bağlanılamadı.");
                             deferred.reject();
                         }
-                    });
+                });
 
-                    e.cancel = deferred.promise(); // İşlem bitene kadar grid'i "bekle" moduna alır
+                e.cancel = deferred.promise(); // İşlem bitene kadar grid'i "bekle" moduna alır
+                }
+    });
+    $("#groupGrid").dxDataGrid({
+        dataSource: groups,
+        keyExpr: "id",
+        showBorders: true,
+        columnAutoWidth: true,
+        editing: {
+            mode: "row",
+            allowAdding: true,
+            allowUpdating: true,
+            allowDeleting: true,
+            useIcons: true,
+            texts: { confirmDeleteMessage: "Bu grubu silmek istediğinize emin misiniz?" },
+        },
+        columns: [
+            { dataField: "name", caption: "Grup Adı", validationRules: [{ type: "required" }] }
+        ],
+        // GRUP AJAX İŞLEMLERİ
+        onRowInserting: function(e) {
+            const deferred = $.Deferred();
+            $.ajax({
+                url: "/api/group/add/", // urls.py yapına göre yolu düzelt
+                type: "POST", contentType: "application/json",
+                data: JSON.stringify(e.data), headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(res) {
+                    if(res.success) { e.data.id = res.id; deferred.resolve(); } 
+                    else { deferred.reject("Hata: " + res.error); }
+                }, error: function() { deferred.reject("Bağlantı hatası"); }
+            });
+            e.cancel = deferred.promise();
+        },
+        onRowUpdating: function(e) {
+            const deferred = $.Deferred();
+            $.ajax({
+                url: "/api/group/update/" + e.key + "/",
+                type: "POST", contentType: "application/json",
+                data: JSON.stringify(e.newData), headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(res) { res.success ? deferred.resolve() : deferred.reject("Hata"); },
+                error: function() { deferred.reject("Sunucu hatası"); }
+            });
+            e.cancel = deferred.promise();
+        },
+        onRowRemoving: function(e) {
+            const deferred = $.Deferred();
+            $.ajax({
+                url: "/api/group/delete/" + e.key + "/",
+                type: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(res) { res.success ? deferred.resolve() : deferred.reject("Hata"); },
+                error: function() { deferred.reject("Sunucu hatası"); }
+            });
+            e.cancel = deferred.promise();
+        },
+
+        masterDetail: {
+            enabled: true,
+            template: function(container, options) {
+                const currentGroupId = options.data.id;
+                const groupPermissions = perms.filter(p => p.group_id === currentGroupId);
+
+                $("<div>")
+                    .addClass("p-3 bg-light border-start border-success border-4")
+                    .append("<h6 class='fw-bold mb-3 text-success'>" + options.data.name + " Menü Yetkileri</h6>")
+                    .append($("<div>").dxDataGrid({
+                        dataSource: groupPermissions,
+                        keyExpr: "id",
+                        showBorders: true,
+                        editing: {
+                            mode: "row",
+                            allowAdding: true, allowUpdating: true, allowDeleting: true, useIcons: true
+                        },
+                        columns: [
+                            {
+                                dataField: "menu_id", caption: "Menü Seçimi",
+                                lookup: { dataSource: menus, valueExpr: "id", displayExpr: "title" },
+                                validationRules: [{ type: "required" }]
+                            },
+                            { dataField: "can_view", caption: "Görebilir mi?", dataType: "boolean" }
+                        ],
+                        // YETKİ AJAX İŞLEMLERİ
+                        onRowInserting: function(e) {
+                            const deferred = $.Deferred();
+                            e.data.group_id = currentGroupId; // Hangi gruba eklendiğini belirtiyoruz
+                            $.ajax({
+                                url: "/api/perm/add/",
+                                type: "POST", contentType: "application/json",
+                                data: JSON.stringify(e.data), headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                                success: function(res) {
+                                    if(res.success) { e.data.id = res.id; deferred.resolve(); }
+                                    else { deferred.reject("Hata"); }
+                                }, error: function() { deferred.reject("Hata"); }
+                            });
+                            e.cancel = deferred.promise();
+                        },
+                        onRowUpdating: function(e) {
+                            const deferred = $.Deferred();
+                            $.ajax({
+                                url: "/api/perm/update/" + e.key + "/",
+                                type: "POST", contentType: "application/json",
+                                data: JSON.stringify(e.newData), headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                                success: function(res) { res.success ? deferred.resolve() : deferred.reject(); },
+                                error: function() { deferred.reject(); }
+                            });
+                            e.cancel = deferred.promise();
+                        },
+                        onRowRemoving: function(e) {
+                            const deferred = $.Deferred();
+                            $.ajax({
+                                url: "/api/perm/delete/" + e.key + "/",
+                                type: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                                success: function(res) { res.success ? deferred.resolve() : deferred.reject(); },
+                                error: function() { deferred.reject(); }
+                            });
+                            e.cancel = deferred.promise();
                         }
+                    }))
+                    .appendTo(container);
+            }
+        }
     });
 });
 </script>

@@ -1,0 +1,41 @@
+{% extends 'users/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4 fw-bold">Tekliflerim</h3>
+    <div class="table-responsive bg-white shadow-sm rounded-4 p-3">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>İhale</th>
+                    <th>Benim Teklifim</th>
+                    <th>İhale Durumu</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bid in bids %}
+                <tr>
+                    <td>{{ bid.auction.title }}</td>
+                    <td class="fw-bold text-success">{{ bid.amount }} TL</td>
+                    <td>
+                        {% if bid.auction.active %}
+                            <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Kapandı</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'auctions:detail' bid.auction.id %}" class="btn btn-sm btn-outline-primary">İncele</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">Henüz bir teklif vermediniz.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

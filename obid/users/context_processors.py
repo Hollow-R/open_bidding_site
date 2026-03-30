@@ -16,7 +16,7 @@ def user_menu_permissions(request):
             id__in=allowed_menu_ids,
             is_active=True,
             parent_menu__isnull=True # Ana menüler
-        ).order_by('order')
+        ).distinct().order_by('order')
         
         return {'user_menus': menus}
     
