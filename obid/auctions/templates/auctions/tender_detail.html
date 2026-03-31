@@ -32,7 +32,10 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label">Yeni Teklif Tutarı</label>
-                            {{ form.amount }} <div class="form-text">Mevcut: {{ auction.current_price }} TL</div>
+                            {{ form.amount }}
+                            <div class="form-text">
+                                Mevcut: {{ auction.current_price }} TL. Bir sonraki teklif en az {{ min_next_bid }} TL olmalıdır.
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-success w-100">Teklifi Gönder</button>
                     </form>

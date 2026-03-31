@@ -1,6 +1,5 @@
 from django import forms
-from .models import Bid
-from .models import Auction
+from .models import Bid, Auction
 
 class BidForm(forms.ModelForm):
     class Meta:
@@ -16,8 +15,12 @@ class BidForm(forms.ModelForm):
 
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
-        if self.auction and amount <= self.auction.current_price:
-            raise forms.ValidationError(f"Teklifiniz güncel fiyattan ({self.auction.current_price} TL) yüksek olmalıdır!")
+        if self.auction:
+            minimum_amount = self.auction.get_minimum_bid_amount()
+            if amount < minimum_amount:
+                raise forms.ValidationError(
+                    f"Teklifiniz en az {minimum_amount} TL olmalıdır. (Mevcut: {self.auction.current_price} TL)"
+                )
         return amount
     
 class AuctionForm(forms.ModelForm):

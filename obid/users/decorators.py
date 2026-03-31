@@ -18,7 +18,7 @@ def menu_permission_required(url_name):
             ).exists()
 
             # 3. Yetki varsa devam et, yoksa ana sayfaya at ve uyarı ver
-            if has_permission or request.user.is_superuser:
+            if has_permission or request.user.groups.filter(name="Admin").exists():
                 return view_func(request, *args, **kwargs)
             else:
                 messages.error(request, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")

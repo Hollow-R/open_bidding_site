@@ -15,6 +15,7 @@ from django.http import JsonResponse
 
 
 class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
+    queryset = Auction.objects.all()
     serializer_class = AuctionSerializer
 
     def get_queryset(self):
@@ -53,16 +54,19 @@ def tender_detail(request, pk):
         form = BidForm(auction=auction)
 
     bids = auction.bids.all().order_by('-amount')[:5]
+    min_next_bid = auction.get_minimum_bid_amount()
     return render(request, 'auctions/tender_detail.html', {
-        'auction': auction, 
-        'bids': bids, 
-        'form': form
+        'auction': auction,
+        'bids': bids,
+        'form': form,
+        'min_next_bid': min_next_bid,
     })
 
 @menu_permission_required('auctions:list')
 def tender_list(request):
     return render(request, 'auctions/tender_list.html')
 
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
 def create_auction(request):
     if request.method == "POST":
         form = AuctionForm(request.POST, request.FILES) # Resimler için request.FILES şart!
@@ -84,7 +88,7 @@ def my_bids(request):
     return render(request, 'auctions/my_bids.html', {'bids': user_bids})
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
 @require_POST
 def delete_auction(request, auction_id):
     try:
@@ -95,7 +99,7 @@ def delete_auction(request, auction_id):
         return JsonResponse({'success': False, 'error': 'İhale bulunamadı.'})
     
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
 @require_POST
 def update_auction(request, auction_id):
     try:
@@ -116,7 +120,7 @@ def update_auction(request, auction_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
     
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
 @require_POST
 def delete_bid(request, bid_id):
     try:

@@ -69,9 +69,139 @@ $(function() {
 
     const auctions = JSON.parse('{{ auctions_json|safe }}');
     const allBids = JSON.parse('{{ bids_json|safe }}');
+    const users = JSON.parse('{{ users_json|safe|escapejs }}' || '[]');
+    const userGroups = JSON.parse('{{ user_groups_json|safe|escapejs }}' || '[]');
     const groups = JSON.parse('{{ groups_json|safe|escapejs }}' || '[]');
     const menus = JSON.parse('{{ menus_json|safe|escapejs }}' || '[]');
     const perms = JSON.parse('{{ perms_json|safe|escapejs }}' || '[]');
+
+    $("#usersGrid").dxDataGrid({
+        dataSource: users,
+        keyExpr: "id",
+        showBorders: true,
+        columnAutoWidth: true,
+        searchPanel: { visible: true },
+        editing: {
+            mode: "row",
+            allowUpdating: true,
+            allowAdding: false,
+            allowDeleting: true,
+            useIcons: true
+        },
+        columns: [
+            { dataField: "id", caption: "ID", width: 60, allowEditing: false },
+            { dataField: "username", caption: "Kullanıcı Adı" },
+            { dataField: "email", caption: "E-Posta" },
+            { dataField: "group_names", caption: "Gruplar", allowEditing: false },
+            { dataField: "is_active", caption: "Aktif", dataType: "boolean", width: 100 }
+        ],
+        onRowUpdating: function(e) {
+            const deferred = $.Deferred();
+            const userId = e.key;
+            const updateData = e.newData;
+
+            if ($.isEmptyObject(updateData)) {
+                deferred.resolve();
+            } else {
+                $.ajax({
+                    url: "/api/user/update/" + userId + "/",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(updateData),
+                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                    success: function(res) {
+                        if (res.success) {
+                            deferred.resolve();
+                        } else {
+                            alert("Güncelleme hatası: " + (res.error || "Bilinmeyen hata"));
+                            deferred.reject();
+                        }
+                    },
+                    error: function() {
+                        alert("Sunucuya bağlanılamadı.");
+                        deferred.reject();
+                    }
+                });
+            }
+            e.cancel = deferred.promise();
+        },
+        onRowRemoving: function(e) {
+            const deferred = $.Deferred();
+            const userId = e.key;
+            $.ajax({
+                url: "/api/user/delete/" + userId + "/",
+                type: "POST",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                success: function(res) {
+                    if (res.success) {
+                        deferred.resolve();
+                    } else {
+                        alert("Silme hatası: " + (res.error || "Bilinmeyen hata"));
+                        deferred.reject();
+                    }
+                },
+                error: function() {
+                    alert("Sunucuya bağlanılamadı.");
+                    deferred.reject();
+                }
+            });
+            e.cancel = deferred.promise();
+        },
+        masterDetail: {
+            enabled: true,
+            template: function(container, options) {
+                const currentUser = options.data;
+                const currentGroups = userGroups.find(ug => ug.user_id === currentUser.id) || { group_ids: [] };
+                const tagBox = $("<div>").dxTagBox({
+                    dataSource: groups,
+                    valueExpr: "id",
+                    displayExpr: "name",
+                    value: currentGroups.group_ids,
+                    showSelectionControls: true,
+                    showClearButton: true,
+                    searchEnabled: true,
+                    width: "100%"
+                });
+
+                const saveButton = $("<button>")
+                    .addClass("btn btn-sm btn-primary mt-3")
+                    .text("Grupları Kaydet")
+                    .on("click", function() {
+                        const selectedGroups = tagBox.dxTagBox("instance").option("value");
+                        $.ajax({
+                            url: "/api/user/update/" + currentUser.id + "/",
+                            type: "POST",
+                            contentType: "application/json",
+                            data: JSON.stringify({ group_ids: selectedGroups }),
+                            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                            success: function(res) {
+                                if (res.success) {
+                                    const userGroupItem = userGroups.find(ug => ug.user_id === currentUser.id);
+                                    if (userGroupItem) {
+                                        userGroupItem.group_ids = selectedGroups;
+                                    } else {
+                                        userGroups.push({ user_id: currentUser.id, group_ids: selectedGroups, group_names: '' });
+                                    }
+                                    alert("Gruplar kaydedildi.");
+                                } else {
+                                    alert("Kaydetme hatası: " + (res.error || "Bilinmeyen hata"));
+                                }
+                            },
+                            error: function() {
+                                alert("Sunucuya bağlanılamadı.");
+                            }
+                        });
+                    });
+
+                $("<div>")
+                    .addClass("p-3 bg-light border-start border-primary border-4")
+                    .append("<h6 class='fw-bold mb-3 text-primary'>Grup Atamaları</h6>")
+                    .append(tagBox)
+                    .append(saveButton)
+                    .appendTo(container);
+            }
+        }
+    });
 
     $("#masterGrid").dxDataGrid({ //İhale ve Bid
         dataSource: auctions,

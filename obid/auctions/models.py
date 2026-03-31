@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_CEILING
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -47,6 +49,10 @@ class Auction(models.Model):
             auction.save(update_fields=['active', 'winner'])
             updated_count += 1
         return updated_count
+
+    def get_minimum_bid_amount(self):
+        minimum = self.current_price * Decimal('1.05')
+        return minimum.quantize(Decimal('0.01'), rounding=ROUND_CEILING)
 
     class Meta:
         verbose_name = "İhale"

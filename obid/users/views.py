@@ -12,6 +12,10 @@ from django.http import JsonResponse
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
+
+def user_in_group(user, group_name):
+    return user.groups.filter(name=group_name).exists()
+
 def register_view(request):
     if request.method == "POST":
         username = request.POST['username']
@@ -57,13 +61,33 @@ def logout_view(request):
 
 @login_required
 def home_view(request):
-    if request.user.is_superuser:
+    if user_in_group(request.user, "Admin"):
         # Süresi geçen ihaleleri devre dışı bırak
         Auction.expire_overdue()
 
         # Admin verileri...
         auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
         bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
+        users_list = []
+        user_groups_list = []
+        for user in User.objects.prefetch_related('groups').all():
+            group_ids = list(user.groups.values_list('id', flat=True))
+            group_names = ', '.join(user.groups.values_list('name', flat=True))
+            users_list.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_active': user.is_active,
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'date_joined': user.date_joined,
+                'group_names': group_names
+            })
+            user_groups_list.append({
+                'user_id': user.id,
+                'group_ids': group_ids,
+                'group_names': group_names
+            })
         groups_list = list(Group.objects.all().values('id', 'name'))
         menus_list = list(Menu.objects.filter(is_active=True).values('id', 'title', 'parent_menu__title'))
         perms_list = list(GroupMenuPermission.objects.all().values('id', 'group_id', 'menu_id', 'can_view'))
@@ -71,10 +95,24 @@ def home_view(request):
         context = {
             'auctions_json': json.dumps(auctions_list, cls=DjangoJSONEncoder),
             'bids_json': json.dumps(bids_list, cls=DjangoJSONEncoder),
+            'users_json': json.dumps(users_list, cls=DjangoJSONEncoder),
+            'user_groups_json': json.dumps(user_groups_list, cls=DjangoJSONEncoder),
             'groups_json': json.dumps(groups_list, cls=DjangoJSONEncoder),
             'menus_json': json.dumps(menus_list, cls=DjangoJSONEncoder),
             'perms_json': json.dumps(perms_list, cls=DjangoJSONEncoder),
         }
+        return render(request, 'users/admin_dashboard.html', context)
+    
+    elif user_in_group(request.user, "İhale Yöneticisi"):
+        Auction.expire_overdue()
+        auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
+        bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
+
+        context = {
+            'auctions_json': json.dumps(auctions_list, cls=DjangoJSONEncoder),
+            'bids_json': json.dumps(bids_list, cls=DjangoJSONEncoder),
+        }
+
         return render(request, 'users/admin_dashboard.html', context)
     else:
         # Normal kullanıcı (Aktif İhaleler)
@@ -84,28 +122,71 @@ def home_view(request):
     
 
 # --- GRUP İŞLEMLERİ ---
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def add_group(request):
     data = json.loads(request.body)
     group = Group.objects.create(name=data.get('name'))
     return JsonResponse({'success': True, 'id': group.id})
 
-@user_passes_test(lambda u: u.is_superuser)
+
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@require_POST
+def update_user(request, user_id):
+    data = json.loads(request.body)
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Kullanıcı bulunamadı.'})
+
+    if 'username' in data:
+        username = data.get('username', '').strip()
+        if username and username != user.username:
+            if User.objects.filter(username=username).exists():
+                return JsonResponse({'success': False, 'error': 'Bu kullanıcı adı zaten kullanımda.'})
+            user.username = username
+    if 'email' in data:
+        user.email = data.get('email')
+    if 'is_active' in data:
+        user.is_active = data.get('is_active')
+    if 'is_staff' in data:
+        user.is_staff = data.get('is_staff')
+    if 'is_superuser' in data:
+        user.is_superuser = data.get('is_superuser')
+    user.save()
+
+    if 'group_ids' in data:
+        group_ids = data.get('group_ids') or []
+        user.groups.set(group_ids)
+
+    return JsonResponse({'success': True})
+
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@require_POST
+def delete_user(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Kullanıcı bulunamadı.'})
+
+    user.delete()
+    return JsonResponse({'success': True})
+
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def update_group(request, obj_id):
     data = json.loads(request.body)
     Group.objects.filter(id=obj_id).update(name=data.get('name'))
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def delete_group(request, obj_id):
     Group.objects.filter(id=obj_id).delete()
     return JsonResponse({'success': True})
 
 # --- YETKİ İŞLEMLERİ ---
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def add_perm(request):
     data = json.loads(request.body)
@@ -116,7 +197,7 @@ def add_perm(request):
     )
     return JsonResponse({'success': True, 'id': perm.id})
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def update_perm(request, obj_id):
     data = json.loads(request.body)
@@ -126,7 +207,7 @@ def update_perm(request, obj_id):
     perm.save()
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
 @require_POST
 def delete_perm(request, obj_id):
     GroupMenuPermission.objects.filter(id=obj_id).delete()

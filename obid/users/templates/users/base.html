@@ -35,15 +35,6 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
                                 <li><h6 class="dropdown-header">İşlemler</h6></li>
-                                
-                                {% if user.is_superuser %}
-                                    <li>
-                                        <a class="dropdown-item text-danger fw-bold" href="{% url 'users:dashboard' %}">
-                                            <i class="bi bi-shield-lock me-2"></i>Sistem Yönetimi
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                {% endif %}
 
                                 {% if 'auctions:my_bids' in user_menu_names %}
                                     <li>
