@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.utils import timezone
 import json
 from django.http import JsonResponse
+from users.models import GroupMenuPermission
 
 
 class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
@@ -21,6 +22,16 @@ class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
     def get_queryset(self):
         Auction.expire_overdue()
         return Auction.objects.all().order_by('-created_at')
+
+
+def user_has_menu_permission(user, menu_url_name):
+    if not user.is_authenticated:
+        return False
+    return GroupMenuPermission.objects.filter(
+        group__in=user.groups.all(),
+        menu__url_name=menu_url_name,
+        can_view=True
+    ).exists()
 
 @menu_permission_required('auctions:list')
 def tender_detail(request, pk):
@@ -66,7 +77,7 @@ def tender_detail(request, pk):
 def tender_list(request):
     return render(request, 'auctions/tender_list.html')
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "auctions:create"))
 def create_auction(request):
     if request.method == "POST":
         form = AuctionForm(request.POST, request.FILES) # Resimler için request.FILES şart!
@@ -88,7 +99,7 @@ def my_bids(request):
     return render(request, 'auctions/my_bids.html', {'bids': user_bids})
 
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "auctions:management"))
 @require_POST
 def delete_auction(request, auction_id):
     try:
@@ -99,7 +110,7 @@ def delete_auction(request, auction_id):
         return JsonResponse({'success': False, 'error': 'İhale bulunamadı.'})
     
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "auctions:management"))
 @require_POST
 def update_auction(request, auction_id):
     try:
@@ -120,7 +131,7 @@ def update_auction(request, auction_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
     
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists() or u.groups.filter(name="İhale Yöneticisi").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "auctions:management"))
 @require_POST
 def delete_bid(request, bid_id):
     try:

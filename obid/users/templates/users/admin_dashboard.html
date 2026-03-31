@@ -19,23 +19,33 @@
     <div class="row g-0">
         <div class="col-md-2 sidebar shadow">
             <h5 class="px-4 mb-4 fw-bold text-white text-uppercase small" style="letter-spacing: 1px;">Yönetim</h5>
+            {% if 'auctions:list' in user_menu_names %}
             <a data-target="section-auctions" class="nav-link active"><i class="bi bi-hammer me-2"></i> İhaleler</a>
-            <a data-target="section-users" class="nav-link"><i class="bi bi-people me-2"></i> Kullanıcılar</a>
-            <a data-target="section-groups" class="nav-link"><i class="bi bi-shield-lock me-2"></i> Grup & Yetkiler</a>
+            {% endif %}
+            {% if 'users:user_management' in user_menu_names %}
+            <a data-target="section-users" href="{% url 'users:user_management' %}" class="nav-link"><i class="bi bi-people me-2"></i> Kullanıcılar</a>
+            {% endif %}
+            {% if 'users:group_permissions' in user_menu_names %}
+            <a data-target="section-groups" href="{% url 'users:group_permissions' %}" class="nav-link"><i class="bi bi-shield-lock me-2"></i> Grup & Yetkiler</a>
+            {% endif %}
         </div>
 
         <div class="col-md-10 main-content">
+            {% if 'auctions:list' in user_menu_names %}
             <div id="section-auctions" class="content-section active-section">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="fw-bold m-0">İhale Yönetimi</h2>
+                    {% if 'auctions:create' in user_menu_names %}
                     <a href="{% url 'auctions:create' %}" class="btn btn-primary shadow-sm rounded-pill px-4">
                         <i class="bi bi-plus-lg me-2"></i>Yeni İhale
                     </a>
+                    {% endif %}
                 </div>
                 <div class="card shadow-sm border-0 rounded-3">
                     <div class="card-body p-1"><div id="masterGrid"></div></div>
                 </div>
             </div>
+            {% endif %}
 
             <div id="section-users" class="content-section">
                 <h2 class="fw-bold mb-4">Kullanıcı Yönetimi</h2>
@@ -57,6 +67,27 @@
 
 <script>
 $(function() {
+    const firstNav = $(".sidebar a.nav-link").first();
+    if (firstNav.length) {
+        $(".sidebar a.nav-link").removeClass("active");
+        firstNav.addClass("active");
+        $(".content-section").removeClass("active-section");
+        $("#" + firstNav.attr("data-target")).addClass("active-section");
+    }
+
+    const initialSection = new URLSearchParams(window.location.search).get("section");
+    if (initialSection === "users") {
+        $(".sidebar a.nav-link").removeClass("active");
+        $(".sidebar a[data-target='section-users']").addClass("active");
+        $(".content-section").removeClass("active-section");
+        $("#section-users").addClass("active-section");
+    } else if (initialSection === "groups") {
+        $(".sidebar a.nav-link").removeClass("active");
+        $(".sidebar a[data-target='section-groups']").addClass("active");
+        $(".content-section").removeClass("active-section");
+        $("#section-groups").addClass("active-section");
+    }
+
     $(".sidebar a.nav-link").click(function(e) {
         e.preventDefault();
         $(".sidebar a.nav-link").removeClass("active");

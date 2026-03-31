@@ -5,6 +5,8 @@ app_name = "users"
 
 urlpatterns = [
     path('', views.home_view, name='dashboard'),
+    path('management/users/', views.user_management_view, name='user_management'),
+    path('management/group-permissions/', views.group_permissions_view, name='group_permissions'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),

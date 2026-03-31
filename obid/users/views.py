@@ -11,10 +11,18 @@ from django.contrib.auth.decorators import user_passes_test
 from django.http import JsonResponse
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from django.urls import reverse
+from users.decorators import menu_permission_required
 
 
-def user_in_group(user, group_name):
-    return user.groups.filter(name=group_name).exists()
+def user_has_menu_permission(user, menu_url_name):
+    if not user.is_authenticated:
+        return False
+    return GroupMenuPermission.objects.filter(
+        group__in=user.groups.all(),
+        menu__url_name=menu_url_name,
+        can_view=True
+    ).exists()
 
 def register_view(request):
     if request.method == "POST":
@@ -26,9 +34,6 @@ def register_view(request):
             messages.error(request, "Username already taken")
             return redirect('users:register')
         user = User.objects.create_user(username=username, email=email, password=password)
-        customer_group, created = Group.objects.get_or_create(name="Müşteri")
-        user.groups.add(customer_group)
-        user.save()
         messages.success(request, "Registration successful! Please login.")
         return redirect('users:login')
 
@@ -59,38 +64,64 @@ def logout_view(request):
     logout(request)
     return redirect('users:login')
 
+
+@login_required
+@menu_permission_required('users:user_management')
+def user_management_view(request):
+    return redirect(f"{reverse('users:dashboard')}?section=users")
+
+
+@login_required
+@menu_permission_required('users:group_permissions')
+def group_permissions_view(request):
+    return redirect(f"{reverse('users:dashboard')}?section=groups")
+
 @login_required
 def home_view(request):
-    if user_in_group(request.user, "Admin"):
-        # Süresi geçen ihaleleri devre dışı bırak
-        Auction.expire_overdue()
+    can_view_system_panel = user_has_menu_permission(request.user, 'users:admin_dashboard')
+    can_view_auctions = user_has_menu_permission(request.user, 'auctions:list')
+    can_manage_auctions = user_has_menu_permission(request.user, 'auctions:management')
+    can_view_user_management = user_has_menu_permission(request.user, 'users:user_management')
+    can_view_group_permissions = user_has_menu_permission(request.user, 'users:group_permissions')
 
-        # Admin verileri...
-        auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
-        bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
+    if can_view_system_panel and (can_view_auctions or can_manage_auctions or can_view_user_management or can_view_group_permissions):
+        Auction.expire_overdue()
+        auctions_list = []
+        bids_list = []
+        if can_view_auctions:
+            auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
+            bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
+
         users_list = []
         user_groups_list = []
-        for user in User.objects.prefetch_related('groups').all():
-            group_ids = list(user.groups.values_list('id', flat=True))
-            group_names = ', '.join(user.groups.values_list('name', flat=True))
-            users_list.append({
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_active': user.is_active,
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser,
-                'date_joined': user.date_joined,
-                'group_names': group_names
-            })
-            user_groups_list.append({
-                'user_id': user.id,
-                'group_ids': group_ids,
-                'group_names': group_names
-            })
-        groups_list = list(Group.objects.all().values('id', 'name'))
-        menus_list = list(Menu.objects.filter(is_active=True).values('id', 'title', 'parent_menu__title'))
-        perms_list = list(GroupMenuPermission.objects.all().values('id', 'group_id', 'menu_id', 'can_view'))
+        groups_list = []
+        menus_list = []
+        perms_list = []
+
+        if can_view_user_management or can_view_group_permissions:
+            for user in User.objects.prefetch_related('groups').all():
+                group_ids = list(user.groups.values_list('id', flat=True))
+                group_names = ', '.join(user.groups.values_list('name', flat=True))
+                users_list.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'is_staff': user.is_staff,
+                    'is_superuser': user.is_superuser,
+                    'date_joined': user.date_joined,
+                    'group_names': group_names
+                })
+                user_groups_list.append({
+                    'user_id': user.id,
+                    'group_ids': group_ids,
+                    'group_names': group_names
+                })
+            groups_list = list(Group.objects.all().values('id', 'name'))
+
+        if can_view_group_permissions:
+            menus_list = list(Menu.objects.filter(is_active=True).values('id', 'title', 'parent_menu__title'))
+            perms_list = list(GroupMenuPermission.objects.all().values('id', 'group_id', 'menu_id', 'can_view'))
 
         context = {
             'auctions_json': json.dumps(auctions_list, cls=DjangoJSONEncoder),
@@ -100,17 +131,7 @@ def home_view(request):
             'groups_json': json.dumps(groups_list, cls=DjangoJSONEncoder),
             'menus_json': json.dumps(menus_list, cls=DjangoJSONEncoder),
             'perms_json': json.dumps(perms_list, cls=DjangoJSONEncoder),
-        }
-        return render(request, 'users/admin_dashboard.html', context)
-    
-    elif user_in_group(request.user, "İhale Yöneticisi"):
-        Auction.expire_overdue()
-        auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
-        bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
-
-        context = {
-            'auctions_json': json.dumps(auctions_list, cls=DjangoJSONEncoder),
-            'bids_json': json.dumps(bids_list, cls=DjangoJSONEncoder),
+            'can_view_auctions': can_view_auctions,
         }
 
         return render(request, 'users/admin_dashboard.html', context)
@@ -122,7 +143,7 @@ def home_view(request):
     
 
 # --- GRUP İŞLEMLERİ ---
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def add_group(request):
     data = json.loads(request.body)
@@ -130,7 +151,7 @@ def add_group(request):
     return JsonResponse({'success': True, 'id': group.id})
 
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:user_management"))
 @require_POST
 def update_user(request, user_id):
     data = json.loads(request.body)
@@ -161,7 +182,7 @@ def update_user(request, user_id):
 
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:user_management"))
 @require_POST
 def delete_user(request, user_id):
     try:
@@ -172,21 +193,21 @@ def delete_user(request, user_id):
     user.delete()
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def update_group(request, obj_id):
     data = json.loads(request.body)
     Group.objects.filter(id=obj_id).update(name=data.get('name'))
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def delete_group(request, obj_id):
     Group.objects.filter(id=obj_id).delete()
     return JsonResponse({'success': True})
 
 # --- YETKİ İŞLEMLERİ ---
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def add_perm(request):
     data = json.loads(request.body)
@@ -197,7 +218,7 @@ def add_perm(request):
     )
     return JsonResponse({'success': True, 'id': perm.id})
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def update_perm(request, obj_id):
     data = json.loads(request.body)
@@ -207,7 +228,7 @@ def update_perm(request, obj_id):
     perm.save()
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: u.groups.filter(name="Admin").exists())
+@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
 @require_POST
 def delete_perm(request, obj_id):
     GroupMenuPermission.objects.filter(id=obj_id).delete()
