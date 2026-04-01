@@ -11,7 +11,7 @@ def user_menu_permissions(request):
             can_view=True
         ).values_list('menu_id', flat=True)
         
-        # 3. Sadece yetkili olunan ve aktif menüleri getir (Sıralı halde)
+        # 3. Sadece yetkili olunan ve aktif menüleri getir
         menus = Menu.objects.filter(
             id__in=allowed_menu_ids,
             is_active=True,
