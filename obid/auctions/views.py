@@ -1,18 +1,16 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from users.decorators import menu_permission_required
 from rest_framework import viewsets
 from .serializers import AuctionSerializer
 from .models import Auction, Bid
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .forms import BidForm, AuctionForm
-from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.utils import timezone
+from users.views import user_has_menu_permission
 import json
 from django.http import JsonResponse
-from users.models import GroupMenuPermission
 
 
 class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
@@ -23,15 +21,6 @@ class AuctionViewSet(viewsets.ReadOnlyModelViewSet): #Router için lazım
         Auction.expire_overdue()
         return Auction.objects.all().order_by('-created_at')
 
-
-def user_has_menu_permission(user, menu_url_name):
-    if not user.is_authenticated:
-        return False
-    return GroupMenuPermission.objects.filter(
-        group__in=user.groups.all(),
-        menu__url_name=menu_url_name,
-        can_view=True
-    ).exists()
 
 @menu_permission_required('auctions:list')
 def tender_detail(request, pk):
@@ -45,13 +34,12 @@ def tender_detail(request, pk):
         if not auction.active:
             messages.error(request, "Bu ihale bitmiş olduğu için artık teklif kabul etmiyor.")
         elif form.is_valid():
-            # Formdan gelen temiz veriyi al ama hemen kaydetme (user eklememiz lazım)
+
             bid = form.save(commit=False)
             bid.user = request.user
             bid.auction = auction
             bid.save() # Veritabanına Bid kaydı atıldı
 
-            # İş kuralı: Auction fiyatını güncelle
             auction.current_price = bid.amount
             auction.save()
 
@@ -80,7 +68,7 @@ def tender_list(request):
 @user_passes_test(lambda u: user_has_menu_permission(u, "auctions:create"))
 def create_auction(request):
     if request.method == "POST":
-        form = AuctionForm(request.POST, request.FILES) # Resimler için request.FILES şart!
+        form = AuctionForm(request.POST, request.FILES)
         if form.is_valid():
             auction = form.save(commit=False)
             auction.owner = request.user # İhaleyi sisteme giren kişi sahibi olur
@@ -92,7 +80,7 @@ def create_auction(request):
     
     return render(request, 'auctions/create_auction.html', {'form': form})
 
-@login_required # En üste eklemeyi unutma: from django.contrib.auth.decorators import login_required
+@login_required 
 def my_bids(request):
     # Kullanıcının verdiği teklifleri, en yüksek tutardan başlayarak getiriyoruz
     user_bids = Bid.objects.filter(user=request.user).select_related('auction').order_by('-amount')
@@ -115,10 +103,8 @@ def delete_auction(request, auction_id):
 def update_auction(request, auction_id):
     try:
         auction = Auction.objects.get(id=auction_id)
-        # JS'den gelen ham veriyi alıyoruz
         data = json.loads(request.body) 
         
-        # Sadece gelen alanları güncelle (Mutlak Güç!)
         if 'title' in data: auction.title = data['title']
         if 'description' in data: auction.description = data['description']
         if 'active' in data: auction.active = data['active']

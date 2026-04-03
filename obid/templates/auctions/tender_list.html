@@ -1,9 +1,8 @@
 {% extends 'users/base.html' %}
 
 {% block content %}
-<link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/23.1.6/css/dx.light.css" />
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script src="https://cdn3.devexpress.com/jslib/23.1.6/js/dx.all.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/23.2.3/css/dx.light.css" />
+<script src="https://cdn3.devexpress.com/jslib/23.2.3/js/dx.all.js"></script>
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -16,10 +15,18 @@
 </div>
 
 <script>
-    $(function() {
-        $("#gridContainer").dxDataGrid({
-
-            dataSource: "/auctions/api/tenders/",
+    document.addEventListener("DOMContentLoaded", function() {
+        new DevExpress.ui.dxDataGrid(document.getElementById("gridContainer"), {
+            dataSource: new DevExpress.data.CustomStore({
+                key: "id",
+                load: function() {
+                    return fetch("/auctions/api/tenders/")
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            return Array.isArray(data) ? data : (data.results || []);
+                        });
+                }
+            }),
             keyExpr: "id",
             remoteOperations: false,
             showBorders: true,

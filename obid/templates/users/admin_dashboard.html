@@ -106,7 +106,7 @@ $(function() {
     const menus = JSON.parse('{{ menus_json|safe|escapejs }}' || '[]');
     const perms = JSON.parse('{{ perms_json|safe|escapejs }}' || '[]');
 
-    $("#usersGrid").dxDataGrid({
+    new DevExpress.ui.dxDataGrid($("#usersGrid")[0], {
         dataSource: users,
         keyExpr: "id",
         showBorders: true,
@@ -183,7 +183,8 @@ $(function() {
             template: function(container, options) {
                 const currentUser = options.data;
                 const currentGroups = userGroups.find(ug => ug.user_id === currentUser.id) || { group_ids: [] };
-                const tagBox = $("<div>").dxTagBox({
+                const $tagBoxHost = $("<div>");
+                const tagBoxInstance = new DevExpress.ui.dxTagBox($tagBoxHost[0], {
                     dataSource: groups,
                     valueExpr: "id",
                     displayExpr: "name",
@@ -198,7 +199,7 @@ $(function() {
                     .addClass("btn btn-sm btn-primary mt-3")
                     .text("Grupları Kaydet")
                     .on("click", function() {
-                        const selectedGroups = tagBox.dxTagBox("instance").option("value");
+                        const selectedGroups = tagBoxInstance.option("value");
                         $.ajax({
                             url: "/api/user/update/" + currentUser.id + "/",
                             type: "POST",
@@ -227,14 +228,14 @@ $(function() {
                 $("<div>")
                     .addClass("p-3 bg-light border-start border-primary border-4")
                     .append("<h6 class='fw-bold mb-3 text-primary'>Grup Atamaları</h6>")
-                    .append(tagBox)
+                    .append($tagBoxHost)
                     .append(saveButton)
                     .appendTo(container);
             }
         }
     });
 
-    $("#masterGrid").dxDataGrid({ //İhale ve Bid
+    new DevExpress.ui.dxDataGrid($("#masterGrid")[0], { //İhale ve Bid
         dataSource: auctions,
         keyExpr: "id",
         showBorders: true,
@@ -253,10 +254,13 @@ $(function() {
                 const currentAuctionId = options.data.id;
                 const auctionBids = allBids.filter(b => b.auction_id === currentAuctionId);
 
+                const $bidGridHost = $("<div>");
                 $("<div>")
                     .addClass("p-3 bg-light border-start border-primary border-4")
                     .append("<h6 class='fw-bold mb-3 text-primary'>Teklif Yönetimi</h6>")
-                    .append($("<div>").dxDataGrid({
+                    .append($bidGridHost)
+                    .appendTo(container);
+                new DevExpress.ui.dxDataGrid($bidGridHost[0], {
                         dataSource: auctionBids,
                         columns: [
                             { dataField: "user__username", caption: "Teklif Veren", allowEditing: false },
@@ -296,8 +300,7 @@ $(function() {
                                 }]
                             }
                         ]
-                    }))
-                    .appendTo(container);
+                    });
             }
         },
         columns: [
@@ -364,7 +367,7 @@ $(function() {
             e.cancel = deferred.promise();
         }
     });
-    $("#groupGrid").dxDataGrid({
+    new DevExpress.ui.dxDataGrid($("#groupGrid")[0], {
         dataSource: groups,
         keyExpr: "id",
         showBorders: true,
@@ -422,10 +425,13 @@ $(function() {
                 const currentGroupId = options.data.id;
                 const groupPermissions = perms.filter(p => p.group_id === currentGroupId);
 
+                const $permGridHost = $("<div>");
                 $("<div>")
                     .addClass("p-3 bg-light border-start border-success border-4")
                     .append("<h6 class='fw-bold mb-3 text-success'>" + options.data.name + " Menü Yetkileri</h6>")
-                    .append($("<div>").dxDataGrid({
+                    .append($permGridHost)
+                    .appendTo(container);
+                new DevExpress.ui.dxDataGrid($permGridHost[0], {
                         dataSource: groupPermissions,
                         keyExpr: "id",
                         showBorders: true,
@@ -477,8 +483,7 @@ $(function() {
                             });
                             e.cancel = deferred.promise();
                         }
-                    }))
-                    .appendTo(container);
+                    });
             }
         }
     });
