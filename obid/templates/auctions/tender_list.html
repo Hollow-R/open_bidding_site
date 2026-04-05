@@ -1,17 +1,29 @@
 {% extends 'users/base.html' %}
 
-{% block content %}
+{% block title %}İhale listesi — Obid{% endblock %}
+
+{% block extra_head %}
 <link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/23.2.3/css/dx.light.css" />
 <script src="https://cdn3.devexpress.com/jslib/23.2.3/js/dx.all.js"></script>
+{% endblock %}
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>İhale Listesi</h2>
-        <a href="#" class="btn btn-success">Yeni İhale Oluştur</a>
+{% block content %}
+<div class="container py-4">
+    <div class="page-header-bar">
+        <div>
+            <h2 class="h3">İhale listesi</h2>
+            <p class="text-muted small mb-0">Tüm kayıtlı ihaleleri arayın ve detaya gidin.</p>
+        </div>
+        <a href="{% url 'auctions:create' %}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i>Yeni ihale oluştur
+        </a>
     </div>
-    <hr>
-    
-    <div id="gridContainer"></div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-2 p-md-3 bg-white">
+            <div id="gridContainer"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -30,8 +42,8 @@
             keyExpr: "id",
             remoteOperations: false,
             showBorders: true,
-            
-            searchPanel: { visible: true, width: 240, placeholder: "Ara..." },
+
+            searchPanel: { visible: true, width: 260, placeholder: "Ara..." },
             filterRow: { visible: true },
             sorting: { mode: "multiple" },
             paging: { pageSize: 10 },
@@ -43,19 +55,19 @@
 
             columns: [
                 { dataField: "id", caption: "ID", width: 50 },
-                { dataField: "title", caption: "İhale Başlığı" },
-                { 
-                    dataField: "starting_price", 
-                    caption: "Başlangıç Fiyatı", 
-                    format: { type: "currency", currency: "TRY" } 
+                { dataField: "title", caption: "İhale başlığı" },
+                {
+                    dataField: "starting_price",
+                    caption: "Başlangıç fiyatı",
+                    format: { type: "currency", currency: "TRY" }
                 },
-                { dataField: "owner_name", caption: "Açan Kurum/Kişi" },
+                { dataField: "owner_name", caption: "Açan kurum / kişi" },
                 { dataField: "active", caption: "Aktif mi?", dataType: "boolean" },
                 {
                     type: "buttons",
                     caption: "İşlem",
                     buttons: [{
-                        text: "Teklif Ver",
+                        text: "Teklif ver",
                         icon: "money",
                         onClick: function(e) {
                             window.location.href = "/auctions/" + e.row.data.id + "/";

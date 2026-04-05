@@ -1,37 +1,43 @@
 {% extends 'users/base.html' %}
 
+{% block title %}Tekliflerim — Obid{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h3 class="mb-4 fw-bold">Tekliflerim</h3>
-    <div class="table-responsive bg-white shadow-sm rounded-4 p-3">
-        <table class="table table-hover">
-            <thead class="table-light">
+<div class="container py-2">
+    <header class="page-hero text-center text-md-start">
+        <h1 class="display-hero h2 mb-2">Tekliflerim</h1>
+        <p class="lead-muted mb-0 mx-auto mx-md-0">Verdiğiniz teklifleri ve ihale durumlarını buradan takip edin.</p>
+    </header>
+
+    <div class="table-responsive table-obid-wrap">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
                 <tr>
-                    <th>İhale</th>
-                    <th>Benim Teklifim</th>
-                    <th>İhale Durumu</th>
-                    <th>İşlem</th>
+                    <th class="ps-4">İhale</th>
+                    <th>Teklifim</th>
+                    <th>Durum</th>
+                    <th class="pe-4 text-end">İşlem</th>
                 </tr>
             </thead>
             <tbody>
                 {% for bid in bids %}
                 <tr>
-                    <td>{{ bid.auction.title }}</td>
+                    <td class="ps-4 fw-medium">{{ bid.auction.title }}</td>
                     <td class="fw-bold text-success">{{ bid.amount }} TL</td>
                     <td>
                         {% if bid.auction.active %}
-                            <span class="badge bg-success">Aktif</span>
+                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle">Aktif</span>
                         {% else %}
-                            <span class="badge bg-secondary">Kapandı</span>
+                            <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle">Kapandı</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <a href="{% url 'auctions:detail' bid.auction.id %}" class="btn btn-sm btn-outline-primary">İncele</a>
+                    <td class="pe-4 text-end">
+                        <a href="{% url 'auctions:detail' bid.auction.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">İncele</a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center text-muted py-4">Henüz bir teklif vermediniz.</td>
+                    <td colspan="4" class="text-center text-muted py-5">Henüz bir teklif vermediniz.</td>
                 </tr>
                 {% endfor %}
             </tbody>

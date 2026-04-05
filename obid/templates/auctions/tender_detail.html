@@ -1,63 +1,247 @@
 {% extends 'users/base.html' %}
 
+{% block title %}{{ auction.title }} — Obid{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auction-gallery {
+        display: flex;
+        gap: 0.75rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    .auction-gallery img {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+        max-height: 320px;
+        width: auto;
+        max-width: min(100%, 520px);
+        object-fit: contain;
+        border-radius: 0.75rem;
+        border: 1px solid var(--obid-border);
+        box-shadow: var(--obid-shadow);
+    }
+    .pdf-viewers-row {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    .pdf-viewer-card {
+        flex: 0 0 auto;
+        width: max-content;
+        box-sizing: border-box;
+        border-radius: 0.75rem !important;
+    }
+    .pdf-pages {
+        max-height: 70vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: #f1f5f9;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        width: max-content;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h2 class="card-title">{{ auction.title }}</h2>
-                <p class="text-muted">İhale Sahibi: {{ auction.owner.username }}</p>
-                <hr>
-                <p class="lead">{{ auction.description }}</p>
-                <div class="alert alert-info">
-                    <strong>Başlangıç Fiyatı:</strong> {{ auction.starting_price }} TL<br>
-                    <strong>Güncel En Yüksek Teklif:</strong> {{ auction.current_price }} TL
+<div class="container py-3">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card detail-main-card border-0 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+                        <h1 class="h3 card-title mb-0 fw-bold flex-grow-1" style="letter-spacing:-0.02em;">{{ auction.title }}</h1>
+                        {% if user.is_authenticated %}
+                        <button type="button" id="watchlist-toggle" class="btn btn-outline-secondary btn-sm rounded-pill px-3 flex-shrink-0"
+                                data-watched="{{ is_watched|yesno:'true,false' }}"
+                                data-url="{% url 'auctions:toggle_watchlist' auction.id %}"
+                                title="İzleme listesine ekle veya çıkar">
+                            <i class="bi bi-eye{% if is_watched %}-fill{% endif %}" id="watchlist-icon" aria-hidden="true"></i>
+                            <span class="visually-hidden">Listem</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-4 small">
+                        <i class="bi bi-person-badge me-1"></i>İhale sahibi: <span class="text-dark fw-medium">{{ auction.owner.username }}</span>
+                    </p>
+
+                    {% with imgs=auction.images.all pdfs=auction.specification_files.all %}
+                    {% if imgs %}
+                    <p class="section-label mb-2">Görseller</p>
+                    <div class="auction-gallery mb-4" role="region" aria-label="İhale görselleri">
+                        {% for gi in imgs %}
+                        <img src="{{ gi.image.url }}" alt="{{ auction.title }} — görsel {{ forloop.counter }}">
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <p class="lead text-secondary mb-4" style="font-size:1.05rem;line-height:1.65;">{{ auction.description }}</p>
+
+                    {% if pdfs %}
+                    <p class="section-label mb-2">Şartname (PDF)</p>
+                    <div class="pdf-viewers-row mb-2" role="region" aria-label="Şartname PDF önizlemeleri">
+                        {% for spec in pdfs %}
+                        <div class="pdf-viewer-card flex-shrink-0 border bg-white p-3 shadow-sm"
+                             data-pdf-url="{{ spec.file.url }}">
+                            <div class="small text-muted mb-2 fw-medium">Şartname {{ forloop.counter }}</div>
+                            <div class="pdf-pages"></div>
+                            <a href="{{ spec.file.url }}" class="btn btn-sm btn-outline-primary mt-2 w-100 rounded-pill" download>
+                                <i class="bi bi-download me-1"></i>PDF indir
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endwith %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-md-4">
-        <div class="card shadow-sm border-primary">
-            <div class="card-header bg-primary text-white">Teklif Ver</div>
-            <div class="card-body">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} small">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
+        <div class="col-lg-4">
+            <aside class="auction-sidebar-sticky">
+            <div class="card bid-panel-card mb-3">
+                <div class="card-header text-white">Teklif ver</div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} small rounded-3">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
 
-                {% if auction.active %}
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label">Yeni Teklif Tutarı</label>
-                            {{ form.amount }}
-                            <div class="form-text">
-                                Mevcut: {{ auction.current_price }} TL. Bir sonraki teklif en az {{ min_next_bid }} TL olmalıdır.
+                    {% if auction.active %}
+                        {% if user.is_authenticated %}
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Yeni teklif tutarı (TL)</label>
+                                {{ form.amount }}
+                                <div class="form-text small">
+                                    Mevcut: <strong>{{ auction.current_price }} TL</strong>. Bir sonraki teklif en az <strong>{{ min_next_bid }} TL</strong> olmalıdır.
+                                </div>
                             </div>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">Teklifi Gönder</button>
-                    </form>
-                {% else %}
-                    <div class="alert alert-secondary">Bu ihale tekliflere kapalıdır.</div>
-                {% endif %}
+                            <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold">Teklifi gönder</button>
+                        </form>
+                        {% else %}
+                        <div class="alert alert-warning small mb-3 rounded-3 border-0">Teklif vermek için giriş yapmalısınız.</div>
+                        <a href="{% url 'users:login' %}" class="btn btn-primary w-100 rounded-pill py-2">Giriş yap</a>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-secondary small mb-0 rounded-3">Bu ihale tekliflere kapalıdır.</div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
 
-        <div class="mt-4">
-            <h5>Son Teklifler</h5>
-            <ul class="list-group">
-                {% for bid in bids %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ bid.user.username }}</span>
-                        <strong>{{ bid.amount }} TL</strong>
-                    </li>
-                {% empty %}
-                    <li class="list-group-item text-muted text-center">Henüz teklif yok.</li>
-                {% endfor %}
-            </ul>
+            <div class="info-strip mb-4">
+                <div class="d-flex flex-column gap-2">
+                    <span><strong>Başlangıç:</strong> {{ auction.starting_price }} TL</span>
+                    <span><strong>Güncel en yüksek:</strong> {{ auction.current_price }} TL</span>
+                </div>
+            </div>
+
+            <div class="bids-list">
+                <h2 class="h6 fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-graph-up-arrow text-primary"></i> Son teklifler
+                </h2>
+                <ul class="list-group list-group-flush shadow-sm rounded-3 overflow-hidden border">
+                    {% for bid in bids %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span class="text-truncate me-2">{{ bid.user.username }}</span>
+                            <strong class="text-success text-nowrap">{{ bid.amount }} TL</strong>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted text-center small py-4">Henüz teklif yok.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            </aside>
         </div>
     </div>
 </div>
+
+{% with pdfs=auction.specification_files.all %}
+{% if pdfs %}
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+(function () {
+    if (typeof pdfjsLib === 'undefined') return;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+    function renderPdf(url, pagesEl) {
+        pdfjsLib.getDocument(url).promise.then(function (pdf) {
+            var seq = Promise.resolve();
+            for (var p = 1; p <= pdf.numPages; p++) {
+                (function (pageNum) {
+                    seq = seq.then(function () {
+                        return pdf.getPage(pageNum).then(function (page) {
+                            var viewport = page.getViewport({ scale: 1.12 });
+                            var canvas = document.createElement('canvas');
+                            var ctx = canvas.getContext('2d');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            canvas.className = 'd-block mb-2 border shadow-sm bg-white rounded';
+                            pagesEl.appendChild(canvas);
+                            return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        });
+                    });
+                })(p);
+            }
+            return seq;
+        }).catch(function () {
+            pagesEl.innerHTML = '<p class="text-danger small mb-0 p-2">PDF önizlemesi yüklenemedi. İndirerek açabilirsiniz.</p>';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-pdf-url]').forEach(function (card) {
+            var url = card.getAttribute('data-pdf-url');
+            var pagesEl = card.querySelector('.pdf-pages');
+            if (url && pagesEl) renderPdf(url, pagesEl);
+        });
+    });
+})();
+</script>
+{% endif %}
+{% endwith %}
+
+{% if user.is_authenticated %}
+<script>
+(function () {
+    function getCookie(name) {
+        var value = '; ' + document.cookie;
+        var parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('watchlist-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var url = btn.getAttribute('data-url');
+            if (!url) return;
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            }).then(function (r) { return r.json(); }).then(function (data) {
+                if (!data.success) return;
+                var icon = document.getElementById('watchlist-icon');
+                if (icon) {
+                    icon.className = data.watched ? 'bi bi-eye-fill' : 'bi bi-eye';
+                }
+                btn.setAttribute('data-watched', data.watched ? 'true' : 'false');
+            }).catch(function () {});
+        });
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

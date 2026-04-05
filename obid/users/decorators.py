@@ -1,27 +1,46 @@
-from django.shortcuts import redirect
+from functools import wraps
+
 from django.contrib import messages
+from django.contrib.auth.views import redirect_to_login
+from django.http import JsonResponse
+from django.shortcuts import redirect
+
 from .models import GroupMenuPermission
 
-def menu_permission_required(url_name):
-    def decorator(view_func):
-        def _wrapped_view(request, *args, **kwargs):
-            # 1. Giriş yapmamışsa login'e at
-            if not request.user.is_authenticated:
-                return redirect('users:login')
-            
-            # 2. Kullanıcının gruplarının bu URL'ye yetkisi var mı?
-            user_groups = request.user.groups.all()
-            has_permission = GroupMenuPermission.objects.filter(
-                group__in=user_groups,
-                menu__url_name=url_name,
-                can_view=True
-            ).exists()
+PERMISSION_DENIED_MSG = "Bu sayfaya erişim yetkiniz bulunmamaktadır."
 
-            # 3. Yetki varsa devam et, yoksa ana sayfaya at ve uyarı ver
-            if has_permission or request.user.groups.filter(name="Admin").exists():
-                return view_func(request, *args, **kwargs)
-            else:
-                messages.error(request, "Bu sayfaya erişim yetkiniz bulunmamaktadır.")
-                return redirect('users:dashboard')
+
+def user_has_menu_permission(user, menu_url_name):
+    if not user.is_authenticated:
+        return False
+    return GroupMenuPermission.objects.filter(
+        group__in=user.groups.all(),
+        menu__url_name=menu_url_name,
+        can_view=True,
+    ).exists()
+
+
+def _respond_permission_denied(request):
+    if (
+        request.path.startswith("/api/")
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or (request.content_type and "application/json" in request.content_type)
+    ):
+        return JsonResponse({"success": False, "error": PERMISSION_DENIED_MSG}, status=403)
+    messages.error(request, PERMISSION_DENIED_MSG)
+    return redirect("users:dashboard")
+
+
+def menu_permission_required(menu_url_name):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect_to_login(request.get_full_path())
+            if not user_has_menu_permission(request.user, menu_url_name):
+                return _respond_permission_denied(request)
+            return view_func(request, *args, **kwargs)
+
         return _wrapped_view
+
     return decorator

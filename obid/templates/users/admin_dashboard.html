@@ -1,24 +1,60 @@
 {% extends 'users/base.html' %}
 
-{% block content %}
+{% block title %}Yönetim paneli — Obid{% endblock %}
+
+{% block extra_head %}
 <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/23.2.3/css/dx.light.css">
+{% endblock %}
+
+{% block content %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdn3.devexpress.com/jslib/23.2.3/js/dx.all.js"></script>
 
 <style>
-    .sidebar { min-height: 100vh; background: #212529; color: white; padding-top: 20px; }
-    .sidebar a { color: #adb5bd; text-decoration: none; display: block; padding: 12px 20px; border-left: 3px solid transparent; cursor: pointer; }
-    .sidebar a:hover, .sidebar a.active { background: #343a40; color: white; border-left-color: #0d6efd; }
-    .main-content { background: #f8f9fa; padding: 25px; }
+    .sidebar-admin {
+        min-height: calc(100vh - 3.75rem);
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 55%, #134e4a 100%);
+        color: #fff;
+        padding-top: 1.5rem;
+        border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .sidebar-admin a {
+        color: rgba(248, 250, 252, 0.75);
+        text-decoration: none;
+        display: block;
+        padding: 0.75rem 1.25rem;
+        margin: 0 0.5rem 0.25rem;
+        border-radius: 0.5rem;
+        border-left: 3px solid transparent;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+    .sidebar-admin a:hover, .sidebar-admin a.active {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-left-color: #2dd4bf;
+    }
+    .main-content-admin {
+        background: linear-gradient(165deg, #f0f4f8 0%, #e8f0fe 40%, #f8fafc 100%);
+        padding: 1.75rem 1.5rem;
+        min-height: calc(100vh - 3.75rem);
+    }
     /* Gizleme Sınıfı */
     .content-section { display: none; }
     .content-section.active-section { display: block; }
+    /* İhale düzenleme popup: Uzantılar, form iki sütunluysa tam genişlik */
+    .auction-attachments-admin {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box;
+    }
 </style>
 
 <div class="container-fluid p-0">
     <div class="row g-0">
-        <div class="col-md-2 sidebar shadow">
-            <h5 class="px-4 mb-4 fw-bold text-white text-uppercase small" style="letter-spacing: 1px;">Yönetim</h5>
+        <div class="col-md-2 sidebar-admin shadow-sm">
+            <h5 class="px-4 mb-3 fw-bold text-white text-uppercase small" style="letter-spacing: 0.12em; opacity: 0.85;">Yönetim</h5>
             {% if 'auctions:list' in user_menu_names %}
             <a data-target="section-auctions" class="nav-link active"><i class="bi bi-hammer me-2"></i> İhaleler</a>
             {% endif %}
@@ -30,7 +66,7 @@
             {% endif %}
         </div>
 
-        <div class="col-md-10 main-content">
+        <div class="col-md-10 main-content-admin">
             {% if 'auctions:list' in user_menu_names %}
             <div id="section-auctions" class="content-section active-section">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -67,9 +103,9 @@
 
 <script>
 $(function() {
-    const firstNav = $(".sidebar a.nav-link").first();
+    const firstNav = $(".sidebar-admin a.nav-link").first();
     if (firstNav.length) {
-        $(".sidebar a.nav-link").removeClass("active");
+        $(".sidebar-admin a.nav-link").removeClass("active");
         firstNav.addClass("active");
         $(".content-section").removeClass("active-section");
         $("#" + firstNav.attr("data-target")).addClass("active-section");
@@ -77,20 +113,20 @@ $(function() {
 
     const initialSection = new URLSearchParams(window.location.search).get("section");
     if (initialSection === "users") {
-        $(".sidebar a.nav-link").removeClass("active");
-        $(".sidebar a[data-target='section-users']").addClass("active");
+        $(".sidebar-admin a.nav-link").removeClass("active");
+        $(".sidebar-admin a[data-target='section-users']").addClass("active");
         $(".content-section").removeClass("active-section");
         $("#section-users").addClass("active-section");
     } else if (initialSection === "groups") {
-        $(".sidebar a.nav-link").removeClass("active");
-        $(".sidebar a[data-target='section-groups']").addClass("active");
+        $(".sidebar-admin a.nav-link").removeClass("active");
+        $(".sidebar-admin a[data-target='section-groups']").addClass("active");
         $(".content-section").removeClass("active-section");
         $("#section-groups").addClass("active-section");
     }
 
-    $(".sidebar a.nav-link").click(function(e) {
+    $(".sidebar-admin a.nav-link").click(function(e) {
         e.preventDefault();
-        $(".sidebar a.nav-link").removeClass("active");
+        $(".sidebar-admin a.nav-link").removeClass("active");
         $(this).addClass("active");
         
         const targetId = $(this).attr("data-target");
@@ -99,6 +135,7 @@ $(function() {
     });
 
     const auctions = JSON.parse('{{ auctions_json|safe }}');
+    let editingAuctionRow = null;
     const allBids = JSON.parse('{{ bids_json|safe }}');
     const users = JSON.parse('{{ users_json|safe|escapejs }}' || '[]');
     const userGroups = JSON.parse('{{ user_groups_json|safe|escapejs }}' || '[]');
@@ -235,18 +272,156 @@ $(function() {
         }
     });
 
+    function removeGalleryImageFromState(auctionId, imageId) {
+        function strip(rows) {
+            if (!rows) return;
+            const idx = rows.findIndex(function (x) { return x.id === imageId; });
+            if (idx >= 0) rows.splice(idx, 1);
+        }
+        const row = auctions.find(function (a) { return a.id === auctionId; });
+        strip(row && row.gallery_images);
+        if (editingAuctionRow && editingAuctionRow.id === auctionId) strip(editingAuctionRow.gallery_images);
+    }
+
+    function removeSpecificationFromState(auctionId, fileId) {
+        function strip(rows) {
+            if (!rows) return;
+            const idx = rows.findIndex(function (x) { return x.id === fileId; });
+            if (idx >= 0) rows.splice(idx, 1);
+        }
+        const row = auctions.find(function (a) { return a.id === auctionId; });
+        strip(row && row.specification_files);
+        if (editingAuctionRow && editingAuctionRow.id === auctionId) strip(editingAuctionRow.specification_files);
+    }
+
+    function rebuildAttachmentsInOpenPopup() {
+        if (!editingAuctionRow) return;
+        const $content = $(".dx-popup-wrapper:visible .dx-popup-content").first();
+        if (!$content.length) return;
+        mountAuctionAttachmentsInPopup($content, editingAuctionRow);
+    }
+
+    function mountAuctionAttachmentsInPopup($content, rowData) {
+        $content.find(".auction-attachments-admin").remove();
+        const $wrap = buildAttachmentsSection(rowData);
+        let $activeField = $content.find(".dx-field-item[data-field=\"active\"]");
+        if (!$activeField.length) {
+            $activeField = $content.find(".dx-field-item").filter(function () {
+                const label = $(this).find(".dx-field-item-label-text, .dx-field-item-label").first().text() || "";
+                return label.indexOf("Aktif") !== -1;
+            }).first();
+        }
+        if ($activeField.length) {
+            $activeField.after($wrap);
+        } else {
+            const $fallback = $content.find(".dx-form, .dx-scrollview-content").first();
+            if ($fallback.length) $fallback.append($wrap);
+            else $content.append($wrap);
+        }
+    }
+
+    function buildAttachmentsSection(rowData) {
+        const aid = rowData.id;
+        const $wrap = $("<div>").addClass("auction-attachments-admin mt-2 pt-2 border-top");
+        $wrap.append("<h6 class=\"fw-bold mb-2\">Uzantılar</h6>");
+        const gall = rowData.gallery_images || [];
+        const pdfs = rowData.specification_files || [];
+
+        if (!gall.length && !pdfs.length) {
+            $wrap.append("<p class=\"text-muted small mb-0\">Bu ihaleye bağlı dosya yok.</p>");
+            return $wrap;
+        }
+
+        if (gall.length) {
+            $wrap.append("<div class=\"fw-semibold small text-muted mb-1\">Galeri görselleri</div>");
+            gall.forEach(function (item, idx) {
+                const $row = $("<div>").addClass("d-flex align-items-center gap-2 mb-2 flex-wrap");
+                const $link = $("<a>")
+                    .addClass("text-decoration-none d-inline-flex align-items-center gap-1")
+                    .attr({ href: item.url, target: "_blank", rel: "noopener" })
+                    .append($("<i>").addClass("bi bi-image"))
+                    .append($("<span>").text("Görsel " + (idx + 1)));
+                const $btn = $("<button type=\"button\">").addClass("btn btn-sm btn-outline-danger").text("Sil");
+                $btn.on("click", function () {
+                    if (!confirm("Bu görseli silmek istediğinize emin misiniz?")) return;
+                    $.ajax({
+                        url: "/auctions/file/image/" + item.id + "/delete/",
+                        type: "POST",
+                        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                        success: function (res) {
+                            if (res.success) {
+                                removeGalleryImageFromState(aid, item.id);
+                                rebuildAttachmentsInOpenPopup();
+                            } else alert(res.error || "Hata");
+                        },
+                        error: function () { alert("Sunucuya bağlanılamadı."); }
+                    });
+                });
+                $row.append($link).append($btn);
+                $wrap.append($row);
+            });
+        }
+
+        if (pdfs.length) {
+            $wrap.append("<div class=\"fw-semibold small text-muted mb-1 mt-2\">Şartname (PDF)</div>");
+            pdfs.forEach(function (item, idx) {
+                const $row = $("<div>").addClass("d-flex align-items-center gap-2 mb-2 flex-wrap");
+                const label = item.name || ("PDF " + (idx + 1));
+                const $link = $("<a>")
+                    .addClass("text-decoration-none d-inline-flex align-items-center gap-1")
+                    .attr({ href: item.url, target: "_blank", rel: "noopener" })
+                    .append($("<i>").addClass("bi bi-file-earmark-pdf"))
+                    .append($("<span>").text(label));
+                const $btn = $("<button type=\"button\">").addClass("btn btn-sm btn-outline-danger").text("Sil");
+                $btn.on("click", function () {
+                    if (!confirm("Bu PDF dosyasını silmek istediğinize emin misiniz?")) return;
+                    $.ajax({
+                        url: "/auctions/file/specification/" + item.id + "/delete/",
+                        type: "POST",
+                        headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                        success: function (res) {
+                            if (res.success) {
+                                removeSpecificationFromState(aid, item.id);
+                                rebuildAttachmentsInOpenPopup();
+                            } else alert(res.error || "Hata");
+                        },
+                        error: function () { alert("Sunucuya bağlanılamadı."); }
+                    });
+                });
+                $row.append($link).append($btn);
+                $wrap.append($row);
+            });
+        }
+
+        return $wrap;
+    }
+
     new DevExpress.ui.dxDataGrid($("#masterGrid")[0], { //İhale ve Bid
         dataSource: auctions,
         keyExpr: "id",
         showBorders: true,
         columnAutoWidth: true,
         searchPanel: { visible: true },
+        onEditingStart: function(e) {
+            editingAuctionRow = e.data;
+        },
         editing: {
             mode: "popup",
             allowUpdating: true,
             allowDeleting: true,
             useIcons: true,
-            texts: { confirmDeleteMessage: "Bu ihaleyi silmek istediğinize emin misiniz?" }
+            texts: { confirmDeleteMessage: "Bu ihaleyi silmek istediğinize emin misiniz?" },
+            popup: {
+                onShown: function(e) {
+                    if (!editingAuctionRow) return;
+                    setTimeout(function() {
+                        mountAuctionAttachmentsInPopup($(e.component.content()), editingAuctionRow);
+                    }, 50);
+                },
+                onHidden: function() {
+                    editingAuctionRow = null;
+                }
+            }
         },
         masterDetail: {
             enabled: true,

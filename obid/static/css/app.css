@@ -1,0 +1,376 @@
+/* Obid — ihale arayüzü tema */
+:root {
+    --obid-bg: #f0f4f8;
+    --obid-bg-accent: linear-gradient(165deg, #e8f0fe 0%, #f0f4f8 45%, #eef6f4 100%);
+    --obid-surface: #ffffff;
+    --obid-surface-elevated: #ffffff;
+    --obid-text: #0f172a;
+    --obid-text-muted: #64748b;
+    --obid-primary: #0d9488;
+    --obid-primary-dark: #0f766e;
+    --obid-primary-soft: rgba(13, 148, 136, 0.12);
+    --obid-accent: #2563eb;
+    --obid-border: rgba(15, 23, 42, 0.08);
+    --obid-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
+    --obid-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(13, 148, 136, 0.12);
+    --obid-radius: 1rem;
+    --obid-radius-lg: 1.25rem;
+    --obid-nav-h: 3.75rem;
+}
+
+body {
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--obid-text);
+    background: var(--obid-bg-accent);
+    min-height: 100vh;
+    letter-spacing: -0.01em;
+}
+
+.navbar-obid {
+    position: relative;
+    z-index: 1030; /* yapışkan kartların üstünde kalsın; hesap dropdown’ı görünür olsun */
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #134e4a 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: var(--obid-nav-h);
+    backdrop-filter: blur(8px);
+}
+
+.navbar-obid .navbar-brand {
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff 0%, #99f6e4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.navbar-obid .nav-link {
+    border-radius: 999px;
+    padding: 0.45rem 1rem !important;
+    transition: background 0.2s, color 0.2s;
+}
+
+.navbar-obid .nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff !important;
+}
+
+.navbar-obid .dropdown-menu {
+    z-index: 1040;
+    border: 1px solid var(--obid-border);
+    border-radius: var(--obid-radius);
+    padding: 0.5rem;
+}
+
+.navbar-obid .notification-badge {
+    font-size: 0.65rem;
+    padding: 0.2em 0.45em;
+    min-width: 1.1rem;
+}
+
+.nav-notifications-dropdown {
+    min-width: min(22rem, calc(100vw - 2rem));
+    max-height: 22rem;
+    overflow-y: auto;
+}
+
+.nav-notifications-dropdown .notification-item {
+    white-space: normal;
+}
+
+.main-wrap {
+    position: relative;
+    z-index: 0;
+    padding-bottom: 3rem;
+}
+
+.page-hero {
+    margin-bottom: 2rem;
+    padding: 1.75rem 0 0.5rem;
+}
+
+.page-hero h1,
+.page-hero .display-hero {
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--obid-text);
+}
+
+.page-hero .lead-muted {
+    color: var(--obid-text-muted);
+    font-size: 1.05rem;
+    max-width: 36rem;
+}
+
+/* İhale kartları */
+.card-auction {
+    border: 1px solid var(--obid-border);
+    border-radius: var(--obid-radius-lg);
+    overflow: hidden;
+    background: var(--obid-surface);
+    box-shadow: var(--obid-shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-auction:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--obid-shadow-hover);
+}
+
+.card-auction .card-img-wrap {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+}
+
+.card-auction .card-img-top,
+.card-auction .card-img-placeholder {
+    height: 220px;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.card-auction:hover .card-img-top {
+    transform: scale(1.04);
+}
+
+.card-auction .card-img-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--obid-text-muted);
+    font-size: 0.875rem;
+}
+
+.card-auction .price-tag {
+    font-variant-numeric: tabular-nums;
+    color: var(--obid-primary-dark);
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+.card-auction .card-footer-obid {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, #f8fafc 100%);
+    border-top: 1px solid var(--obid-border) !important;
+    font-size: 0.8125rem;
+}
+
+/* Giriş / kayıt */
+.auth-shell {
+    min-height: calc(100vh - var(--obid-nav-h) - 4rem);
+    display: flex;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+.auth-card {
+    border: 1px solid var(--obid-border);
+    border-radius: var(--obid-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--obid-shadow);
+    background: var(--obid-surface);
+}
+
+.auth-card .card-header-obid-login {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 45%, #1e40af 100%);
+    border: none;
+    padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.auth-card .card-header-obid-register {
+    background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0891b2 100%);
+    border: none;
+    padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.auth-card .card-header-obid h4 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.auth-card .card-body {
+    padding: 1.75rem;
+}
+
+.auth-card .form-control {
+    border-radius: 0.65rem;
+    padding: 0.65rem 0.9rem;
+    border-color: #e2e8f0;
+}
+
+.auth-card .form-control:focus {
+    border-color: var(--obid-primary);
+    box-shadow: 0 0 0 3px var(--obid-primary-soft);
+}
+
+/* Detay sayfası */
+.detail-main-card {
+    border: 1px solid var(--obid-border);
+    border-radius: var(--obid-radius-lg);
+    box-shadow: var(--obid-shadow);
+    background: var(--obid-surface);
+}
+
+/* Sağ sütun: teklif + özet + son teklifler tek blokta, birlikte kayar / yapışır */
+.auction-sidebar-sticky {
+    position: sticky;
+    top: 1rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+}
+
+.bid-panel-card {
+    border: none;
+    border-radius: var(--obid-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--obid-shadow);
+}
+
+.bid-panel-card .card-header {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    border: none;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+}
+
+.bid-panel-card .card-body {
+    padding: 1.25rem;
+}
+
+.info-strip {
+    border-radius: var(--obid-radius);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    background: linear-gradient(135deg, rgba(219, 234, 254, 0.5) 0%, rgba(204, 251, 241, 0.4) 100%);
+    padding: 1rem 1.15rem;
+    font-size: 0.9rem;
+}
+
+.bids-list .list-group-item {
+    border-color: var(--obid-border);
+    padding: 0.65rem 1rem;
+}
+
+.bids-list .list-group-item:first-child {
+    border-top-left-radius: var(--obid-radius);
+    border-top-right-radius: var(--obid-radius);
+}
+
+.bids-list .list-group-item:last-child {
+    border-bottom-left-radius: var(--obid-radius);
+    border-bottom-right-radius: var(--obid-radius);
+}
+
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--obid-text-muted);
+}
+
+/* Tablo */
+.table-obid-wrap {
+    border: 1px solid var(--obid-border);
+    border-radius: var(--obid-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--obid-shadow);
+    background: var(--obid-surface);
+}
+
+.table-obid-wrap .table {
+    margin-bottom: 0;
+}
+
+.table-obid-wrap thead th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--obid-text-muted);
+    border-bottom-width: 1px;
+    background: #f8fafc;
+}
+
+/* Liste / oluştur sayfaları */
+.page-header-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.page-header-bar h2 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+/* Form oluştur */
+.form-create-card .card-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: none;
+    padding: 1.1rem 1.35rem;
+}
+
+.form-create-card .card-header h5 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+.form-create-card .form-control:focus,
+.form-create-card .form-select:focus {
+    border-color: var(--obid-primary);
+    box-shadow: 0 0 0 3px var(--obid-primary-soft);
+}
+
+/* Footer */
+.site-footer {
+    margin-top: auto;
+    padding: 1.25rem 0;
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--obid-text-muted);
+    border-top: 1px solid var(--obid-border);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Bootstrap uyumu */
+.btn-primary {
+    --bs-btn-bg: var(--obid-primary);
+    --bs-btn-border-color: var(--obid-primary);
+    --bs-btn-hover-bg: var(--obid-primary-dark);
+    --bs-btn-hover-border-color: var(--obid-primary-dark);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--obid-primary-dark);
+    --bs-btn-border-color: var(--obid-primary);
+    --bs-btn-hover-bg: var(--obid-primary);
+    --bs-btn-hover-border-color: var(--obid-primary);
+}
+
+.text-primary {
+    color: var(--obid-primary-dark) !important;
+}
+
+/* Küçük ekranlar */
+@media (max-width: 991.98px) {
+    .auction-sidebar-sticky {
+        position: static;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .card-auction .card-img-top,
+    .card-auction .card-img-placeholder {
+        height: 200px;
+    }
+}

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login
@@ -7,22 +9,12 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import logout
 from auctions.models import Auction, Bid
 from users.models import Menu, GroupMenuPermission
-from django.contrib.auth.decorators import user_passes_test
 from django.http import JsonResponse
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import reverse
-from users.decorators import menu_permission_required
 
-
-def user_has_menu_permission(user, menu_url_name):
-    if not user.is_authenticated:
-        return False
-    return GroupMenuPermission.objects.filter(
-        group__in=user.groups.all(),
-        menu__url_name=menu_url_name,
-        can_view=True
-    ).exists()
+from .decorators import menu_permission_required, user_has_menu_permission
 
 def register_view(request):
     if request.method == "POST":
@@ -65,14 +57,12 @@ def logout_view(request):
     return redirect('users:login')
 
 
-@login_required
-@menu_permission_required('users:user_management')
+@menu_permission_required("users:user_management")
 def user_management_view(request):
     return redirect(f"{reverse('users:dashboard')}?section=users")
 
 
-@login_required
-@menu_permission_required('users:group_permissions')
+@menu_permission_required("users:group_permissions")
 def group_permissions_view(request):
     return redirect(f"{reverse('users:dashboard')}?section=groups")
 
@@ -89,7 +79,34 @@ def home_view(request):
         auctions_list = []
         bids_list = []
         if can_view_auctions:
-            auctions_list = list(Auction.objects.all().values('id', 'title', "description", 'owner__username', 'current_price', 'winner__username', "created_at", 'end_time', 'active'))
+            auctions_qs = (
+                Auction.objects.select_related('owner', 'winner')
+                .prefetch_related('images', 'specification_files')
+                .all()
+            )
+            for a in auctions_qs:
+                gallery_images = [{'id': img.id, 'url': img.image.url} for img in a.images.all()]
+                specification_files = [
+                    {
+                        'id': sf.id,
+                        'url': sf.file.url,
+                        'name': Path(sf.file.name).name if sf.file.name else 'dosya.pdf',
+                    }
+                    for sf in a.specification_files.all()
+                ]
+                auctions_list.append({
+                    'id': a.id,
+                    'title': a.title,
+                    'description': a.description,
+                    'owner__username': a.owner.username if a.owner_id else '',
+                    'current_price': a.current_price,
+                    'winner__username': a.winner.username if a.winner_id else None,
+                    'created_at': a.created_at,
+                    'end_time': a.end_time,
+                    'active': a.active,
+                    'gallery_images': gallery_images,
+                    'specification_files': specification_files,
+                })
             bids_list = list(Bid.objects.all().values('id', 'auction_id', 'user__username', 'amount', 'created_at'))
 
         users_list = []
@@ -138,12 +155,12 @@ def home_view(request):
     else:
         # Normal kullanıcı (Aktif İhaleler)
         Auction.expire_overdue()
-        auctions = Auction.objects.filter(active=True).order_by('-created_at')
+        auctions = Auction.objects.filter(active=True).order_by('-created_at').prefetch_related('images')
         return render(request, 'users/dashboard.html', {'auctions': auctions})
     
 
 # --- GRUP İŞLEMLERİ ---
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def add_group(request):
     data = json.loads(request.body)
@@ -151,7 +168,7 @@ def add_group(request):
     return JsonResponse({'success': True, 'id': group.id})
 
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:user_management"))
+@menu_permission_required("users:user_management")
 @require_POST
 def update_user(request, user_id):
     data = json.loads(request.body)
@@ -182,7 +199,7 @@ def update_user(request, user_id):
 
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:user_management"))
+@menu_permission_required("users:user_management")
 @require_POST
 def delete_user(request, user_id):
     try:
@@ -193,21 +210,21 @@ def delete_user(request, user_id):
     user.delete()
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def update_group(request, obj_id):
     data = json.loads(request.body)
     Group.objects.filter(id=obj_id).update(name=data.get('name'))
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def delete_group(request, obj_id):
     Group.objects.filter(id=obj_id).delete()
     return JsonResponse({'success': True})
 
 # --- YETKİ İŞLEMLERİ ---
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def add_perm(request):
     data = json.loads(request.body)
@@ -218,7 +235,7 @@ def add_perm(request):
     )
     return JsonResponse({'success': True, 'id': perm.id})
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def update_perm(request, obj_id):
     data = json.loads(request.body)
@@ -228,7 +245,7 @@ def update_perm(request, obj_id):
     perm.save()
     return JsonResponse({'success': True})
 
-@user_passes_test(lambda u: user_has_menu_permission(u, "users:group_permissions"))
+@menu_permission_required("users:group_permissions")
 @require_POST
 def delete_perm(request, obj_id):
     GroupMenuPermission.objects.filter(id=obj_id).delete()

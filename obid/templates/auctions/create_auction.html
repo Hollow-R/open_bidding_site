@@ -1,27 +1,54 @@
 {% extends 'users/base.html' %}
 
+{% block title %}Yeni ihale — Obid{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow border-0 rounded-4">
-                <div class="card-header bg-dark text-white p-3">
-                    <h5 class="mb-0"><i class="bi bi-hammer me-2"></i>Yeni İhale Yayına Al</h5>
+        <div class="col-lg-8">
+            <header class="page-hero text-center text-md-start pb-2">
+                <h1 class="h3 fw-bold mb-2">Yeni ihale yayına al</h1>
+                <p class="lead-muted mb-0">Başlık, açıklama, süre ve dosyaları ekleyerek ihaleyi oluşturun.</p>
+            </header>
+
+            <div class="card form-create-card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="card-header text-white">
+                    <h2 class="h5 mb-0 d-flex align-items-center gap-2"><i class="bi bi-hammer"></i> İhale bilgileri</h2>
                 </div>
-                <div class="card-body p-4">
-                    <form method="post" enctype="multipart/form-data"> {% csrf_token %}
-                        
+                <div class="card-body p-4 p-md-5">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} rounded-3">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
                         <div class="row">
-                            <div class="col-md-12 mb-3">{{ form.title.label_tag }}{{ form.title }}</div>
-                            <div class="col-md-12 mb-3">{{ form.description.label_tag }}{{ form.description }}</div>
+                            <div class="col-12 mb-3">{{ form.title.label_tag }}{{ form.title }}</div>
+                            <div class="col-12 mb-3">{{ form.description.label_tag }}{{ form.description }}</div>
                             <div class="col-md-6 mb-3">{{ form.starting_price.label_tag }}{{ form.starting_price }}</div>
                             <div class="col-md-6 mb-3">{{ form.end_time.label_tag }}{{ form.end_time }}</div>
-                            <div class="col-md-12 mb-3">{{ form.image.label_tag }}{{ form.image }}</div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="id_images">İhale görselleri</label>
+                                <input type="file" name="images" id="id_images" class="form-control"
+                                       accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp"
+                                       multiple>
+                                <div class="form-text">En fazla 10 adet; JPEG, PNG, GIF veya WebP.</div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label" for="id_specifications">Şartname (PDF)</label>
+                                <input type="file" name="specifications" id="id_specifications" class="form-control"
+                                       accept="application/pdf,.pdf" multiple>
+                                <div class="form-text">En fazla 5 adet PDF.</div>
+                            </div>
                         </div>
 
-                        <div class="d-grid gap-2 mt-3">
-                            <button type="submit" class="btn btn-success btn-lg">İhaleyi Başlat</button>
-                            <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary">Vazgeç</a>
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg rounded-pill py-3 fw-semibold">
+                                <i class="bi bi-rocket-takeoff me-2"></i>İhaleyi başlat
+                            </button>
+                            <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary rounded-pill">Vazgeç</a>
                         </div>
                     </form>
                 </div>

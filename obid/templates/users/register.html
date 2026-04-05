@@ -1,37 +1,44 @@
 {% extends 'users/base.html' %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card mt-5">
-            <div class="card-header bg-success text-white">
-                <h4>Kayıt Ol</h4>
-            </div>
-            <div class="card-body">
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
+{% block title %}Kayıt Ol — Obid{% endblock %}
 
-                <form method="POST">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Kullanıcı Adı:</label>
-                        <input type="text" name="username" class="form-control" required>
+{% block content %}
+<div class="auth-shell">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card auth-card border-0">
+                    <div class="card-header card-header-obid-register text-white card-header-obid">
+                        <h4 class="d-flex align-items-center gap-2"><i class="bi bi-person-plus"></i> Kayıt Ol</h4>
+                        <p class="small mb-0 mt-2 opacity-75">Yeni bir hesap oluşturun</p>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">E-posta:</label>
-                        <input type="email" name="email" class="form-control" required>
+                    <div class="card-body">
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} rounded-3 small">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">Kullanıcı adı</label>
+                                <input type="text" name="username" class="form-control" required autocomplete="username" placeholder="Benzersiz kullanıcı adı">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-medium">E-posta</label>
+                                <input type="email" name="email" class="form-control" required autocomplete="email" placeholder="ornek@postaci.com">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-medium">Şifre</label>
+                                <input type="password" name="password" class="form-control" required autocomplete="new-password" placeholder="En az bir güçlü şifre">
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold">Hesap oluştur</button>
+                        </form>
+                        <div class="mt-4 text-center small text-muted">
+                            Zaten hesabınız var mı? <a href="{% url 'users:login' %}" class="fw-semibold text-decoration-none">Giriş yapın</a>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Şifre:</label>
-                        <input type="password" name="password" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">Kayıt Ol</button>
-                </form>
-                <div class="mt-3 text-center">
-                    Zaten hesabınız var mı? <a href="{% url 'users:login' %}">Giriş Yap</a>
                 </div>
             </div>
         </div>

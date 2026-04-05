@@ -26,11 +26,10 @@ class BidForm(forms.ModelForm):
 class AuctionForm(forms.ModelForm):
     class Meta:
         model = Auction
-        fields = ['title', 'description', 'starting_price', 'end_time', 'image']
+        fields = ['title', 'description', 'starting_price', 'end_time']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İhale Başlığı'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ürün detayları...'}),
             'starting_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }

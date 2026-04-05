@@ -1,7 +1,10 @@
 from .models import Menu, GroupMenuPermission
+from auctions.models import Auction, AuctionWinNotification
+
 
 def user_menu_permissions(request):
     if request.user.is_authenticated:
+        Auction.expire_overdue()
         # 1. Kullanıcının dahil olduğu grupları al
         user_groups = request.user.groups.all()
         
@@ -24,9 +27,26 @@ def user_menu_permissions(request):
             can_view=True
         ).values_list('menu__url_name', flat=True)
 
+        win_notifications = list(
+            AuctionWinNotification.objects.filter(user=request.user)
+            .select_related('auction')
+            .order_by('-created_at')[:12]
+        )
+        win_notifications_unread = AuctionWinNotification.objects.filter(
+            user=request.user,
+            read_at__isnull=True,
+        ).count()
+
         return {
             'user_menus': menus,
-            'user_menu_names': list(allowed_menu_names)
+            'user_menu_names': list(allowed_menu_names),
+            'win_notifications': win_notifications,
+            'win_notifications_unread': win_notifications_unread,
         }
-    
-    return {'user_menus': []}
+
+    return {
+        'user_menus': [],
+        'user_menu_names': [],
+        'win_notifications': [],
+        'win_notifications_unread': 0,
+    }

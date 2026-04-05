@@ -1,22 +1,12 @@
 {% extends 'users/base.html' %}
-{% load static %}
 
-{% block title %}Aktif İhaleler — Obid{% endblock %}
+{% block title %}İzlediklerim — Obid{% endblock %}
 
 {% block content %}
 <div class="container py-2">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show rounded-3 border-0 shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
     <header class="page-hero text-center text-md-start">
-        <h1 class="display-hero h2 mb-2">Aktif İhaleler</h1>
-        <p class="lead-muted mb-0 mx-auto mx-md-0">Güncel teklif fiyatlarını inceleyin ve katılmak istediğiniz ihaleye teklif verin.</p>
+        <h1 class="display-hero h2 mb-2">İzlediklerim</h1>
+        <p class="lead-muted mb-0 mx-auto mx-md-0">Takip ettiğiniz ihalelere buradan hızlıca dönebilirsiniz.</p>
     </header>
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
@@ -42,15 +32,21 @@
                             <span class="price-tag">{{ auction.current_price }} TL</span>
                         </div>
                         <a href="{% url 'auctions:detail' auction.id %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
-                            Teklif Ver
+                            {% if auction.active %}Teklif ver{% else %}İncele{% endif %}
                         </a>
                     </div>
                 </div>
 
                 <div class="card-footer card-footer-obid border-0 py-3 d-flex justify-content-between align-items-center text-muted">
-                    <span class="d-inline-flex align-items-center"><i class="bi bi-lightning-charge text-warning me-1"></i><span class="small">Canlı</span></span>
+                    <span class="d-inline-flex align-items-center"><i class="bi bi-eye text-primary me-1"></i><span class="small">İzleniyor</span></span>
                     <small class="fw-semibold text-secondary">
+                        {% if auction.active and auction.end_time %}
                         <i class="bi bi-clock-history me-1"></i>{{ auction.end_time|timeuntil }} kaldı
+                        {% elif auction.active %}
+                        <span class="badge rounded-pill bg-success">Aktif</span>
+                        {% else %}
+                        <span class="badge rounded-pill bg-secondary">Kapandı</span>
+                        {% endif %}
                     </small>
                 </div>
             </article>
@@ -58,8 +54,8 @@
         {% empty %}
         <div class="col-12">
             <div class="text-center py-5 px-4 rounded-4 border bg-white shadow-sm">
-                <i class="bi bi-inbox display-4 text-muted opacity-50"></i>
-                <p class="text-muted mb-0 mt-3">Henüz aktif bir ihale bulunmuyor.</p>
+                <i class="bi bi-eye-slash display-4 text-muted opacity-50"></i>
+                <p class="text-muted mb-0 mt-3">İzleme listenizde henüz ihale yok. İhale sayfasındaki göz simgesiyle ekleyebilirsiniz.</p>
             </div>
         </div>
         {% endfor %}

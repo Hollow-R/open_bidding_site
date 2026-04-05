@@ -2,8 +2,10 @@ gridler devextreme ile değişecek  X
 
 İhaleler de fazla ürün eklenebilecek, KDV birim bilgisi verilecek, kişi ihaleye girdiğinde her ürün için ayrı fiyat verecek.
 her ürün için birer görsel eklenecek.
-kişi herhangi bir formatta görüntü ekleyebilecek ayrıca herhangi bir formatta descriptionda ekleyebilecek bunları gösteren toolları implemente et
+kişi herhangi bir formatta görüntü ekleyebilecek ayrıca herhangi bir formatta descriptionda ekleyebilecek bunları gösteren toolları implemente et       X
 
 frontendi güzelleştir
 
 templateleri tek bir yerde topla  X
+
+soru sor özelliği
