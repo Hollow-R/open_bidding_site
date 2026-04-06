@@ -25,6 +25,7 @@
                         {% csrf_token %}
 
                         <div class="row">
+                            <div class="col-12 mb-3">{{ form.owner.label_tag }}{{ form.owner }}</div>
                             <div class="col-12 mb-3">{{ form.title.label_tag }}{{ form.title }}</div>
                             <div class="col-12 mb-3">{{ form.description.label_tag }}{{ form.description }}</div>
                             <div class="col-md-6 mb-3">{{ form.starting_price.label_tag }}{{ form.starting_price }}</div>
@@ -45,7 +46,7 @@
                         </div>
 
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-success btn-lg rounded-pill py-3 fw-semibold">
+                            <button type="submit" class="btn btn-success btn-lg py-2 fw-semibold">
                                 <i class="bi bi-rocket-takeoff me-2"></i>İhaleyi başlat
                             </button>
                             <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary rounded-pill">Vazgeç</a>

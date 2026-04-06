@@ -26,10 +26,15 @@ class BidForm(forms.ModelForm):
 class AuctionForm(forms.ModelForm):
     class Meta:
         model = Auction
-        fields = ['title', 'description', 'starting_price', 'end_time']
+        fields = ['owner', 'title', 'description', 'starting_price', 'end_time']
         widgets = {
+            'owner': forms.Select(attrs={'class': 'form-control'}),
             'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'İhale Başlığı'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ürün detayları...'}),
             'starting_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['owner'].queryset = User.objects.filter(is_active=True).order_by('username')

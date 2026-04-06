@@ -116,7 +116,6 @@ def create_auction(request):
             messages.error(request, err)
         if form.is_valid() and not upload_errors:
             auction = form.save(commit=False)
-            auction.owner = request.user # İhaleyi sisteme giren kişi sahibi olur
             auction.current_price = auction.starting_price # Başlangıç fiyatı güncel fiyattır
             auction.save()
             for i, img in enumerate(image_files):
