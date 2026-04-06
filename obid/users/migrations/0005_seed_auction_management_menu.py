@@ -4,7 +4,7 @@ from django.db import migrations
 def create_auction_management_menu(apps, schema_editor):
     Menu = apps.get_model("users", "Menu")
     Menu.objects.update_or_create(
-        url_name="auctions:management",
+        url_name="auctions:list",
         defaults={
             "title": "İhale Yönetimi İşlemleri",
             "order": 25,
@@ -15,7 +15,7 @@ def create_auction_management_menu(apps, schema_editor):
 
 def remove_auction_management_menu(apps, schema_editor):
     Menu = apps.get_model("users", "Menu")
-    Menu.objects.filter(url_name="auctions:management").delete()
+    Menu.objects.filter(url_name="auctions:list").delete()
 
 
 class Migration(migrations.Migration):

@@ -25,10 +25,36 @@
                         {% csrf_token %}
 
                         <div class="row">
-                            <div class="col-12 mb-3">{{ form.title.label_tag }}{{ form.title }}</div>
-                            <div class="col-12 mb-3">{{ form.description.label_tag }}{{ form.description }}</div>
-                            <div class="col-md-6 mb-3">{{ form.starting_price.label_tag }}{{ form.starting_price }}</div>
-                            <div class="col-md-6 mb-3">{{ form.end_time.label_tag }}{{ form.end_time }}</div>
+                            <div class="col-12 mb-3">
+                                {{ form.owner.label_tag }}{{ form.owner }}
+                                {% for error in form.owner.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-12 mb-3">
+                                {{ form.title.label_tag }}{{ form.title }}
+                                {% for error in form.title.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-12 mb-3">
+                                {{ form.description.label_tag }}{{ form.description }}
+                                {% for error in form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.starting_price.label_tag }}{{ form.starting_price }}
+                                {% for error in form.starting_price.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.end_time.label_tag }}{{ form.end_time }}
+                                {% for error in form.end_time.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                             <div class="col-12 mb-3">
                                 <label class="form-label" for="id_images">İhale görselleri</label>
                                 <input type="file" name="images" id="id_images" class="form-control"

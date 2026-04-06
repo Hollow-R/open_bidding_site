@@ -24,18 +24,22 @@ class Auction(models.Model):
 
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
+    vat_rate = models.DecimalField(max_digits=3, decimal_places=2, default=Decimal('0.18'), help_text="KDV oranı (örn: 0.18 için %18)")
 
     created_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
     end_time = models.DateTimeField(null=True, blank=True)
 
+    def _close_auction(self):
+        highest_bid = self.bids.order_by('-amount').first()
+        self.winner = highest_bid.user if highest_bid else None
+        self.active = False
+        self.save(update_fields=['active', 'winner'])
+        notify_auction_winner(self)
+
     def expire_if_needed(self):
         if self.active and self.end_time and timezone.now() > self.end_time:
-            highest_bid = self.bids.order_by('-amount').first()
-            self.winner = highest_bid.user if highest_bid else None
-            self.active = False
-            self.save(update_fields=['active', 'winner'])
-            notify_auction_winner(self)
+            self._close_auction()
             return True
         return False
 
@@ -44,17 +48,23 @@ class Auction(models.Model):
         expired_auctions = cls.objects.filter(active=True, end_time__isnull=False, end_time__lt=timezone.now()).prefetch_related('bids')
         updated_count = 0
         for auction in expired_auctions:
-            highest_bid = auction.bids.order_by('-amount').first()
-            auction.winner = highest_bid.user if highest_bid else None
-            auction.active = False
-            auction.save(update_fields=['active', 'winner'])
-            notify_auction_winner(auction)
+            auction._close_auction()
             updated_count += 1
         return updated_count
 
     def get_minimum_bid_amount(self):
         minimum = self.current_price * Decimal('1.05')
         return minimum.quantize(Decimal('0.01'), rounding=ROUND_CEILING)
+
+    @property
+    def starting_price_with_vat(self):
+        """Net başlangıç fiyatı + KDV"""
+        return (self.starting_price * (1 + self.vat_rate)).quantize(Decimal('0.01'), rounding=ROUND_CEILING)
+
+    @property
+    def current_price_with_vat(self):
+        """Mevcut fiyat + KDV"""
+        return (self.current_price * (1 + self.vat_rate)).quantize(Decimal('0.01'), rounding=ROUND_CEILING)
 
     class Meta:
         verbose_name = "İhale"

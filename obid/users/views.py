@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User, Group
 from django.contrib.auth import authenticate, login
@@ -69,12 +70,12 @@ def group_permissions_view(request):
 @login_required
 def home_view(request):
     can_view_system_panel = user_has_menu_permission(request.user, 'users:admin_dashboard')
+    can_view_public_dashboard = user_has_menu_permission(request.user, 'users:dashboard')
     can_view_auctions = user_has_menu_permission(request.user, 'auctions:list')
-    can_manage_auctions = user_has_menu_permission(request.user, 'auctions:management')
     can_view_user_management = user_has_menu_permission(request.user, 'users:user_management')
     can_view_group_permissions = user_has_menu_permission(request.user, 'users:group_permissions')
 
-    if can_view_system_panel and (can_view_auctions or can_manage_auctions or can_view_user_management or can_view_group_permissions):
+    if can_view_system_panel:
         Auction.expire_overdue()
         auctions_list = []
         bids_list = []
@@ -111,9 +112,6 @@ def home_view(request):
 
         users_list = []
         user_groups_list = []
-        groups_list = []
-        menus_list = []
-        perms_list = []
 
         if can_view_user_management or can_view_group_permissions:
             for user in User.objects.prefetch_related('groups').all():
@@ -152,12 +150,71 @@ def home_view(request):
         }
 
         return render(request, 'users/admin_dashboard.html', context)
-    else:
+    elif can_view_public_dashboard:
         # Normal kullanıcı (Aktif İhaleler)
         Auction.expire_overdue()
-        auctions = Auction.objects.filter(active=True).order_by('-created_at').prefetch_related('images')
-        return render(request, 'users/dashboard.html', {'auctions': auctions})
-    
+        auctions = Auction.objects.filter(active=True)
+
+        q = request.GET.get('q', '').strip()
+        if q:
+            auctions = auctions.filter(
+                Q(title__icontains=q) | Q(description__icontains=q)
+            )
+
+        min_start = request.GET.get('min_starting_price')
+        if min_start:
+            try:
+                auctions = auctions.filter(starting_price__gte=min_start)
+            except ValueError:
+                pass
+
+        max_start = request.GET.get('max_starting_price')
+        if max_start:
+            try:
+                auctions = auctions.filter(starting_price__lte=max_start)
+            except ValueError:
+                pass
+
+        min_current = request.GET.get('min_current_price')
+        if min_current:
+            try:
+                auctions = auctions.filter(current_price__gte=min_current)
+            except ValueError:
+                pass
+
+        max_current = request.GET.get('max_current_price')
+        if max_current:
+            try:
+                auctions = auctions.filter(current_price__lte=max_current)
+            except ValueError:
+                pass
+
+        sort_by = request.GET.get('sort_by', '-created_at')
+        valid_sorts = {
+            '-created_at': '-created_at',  # En son açılan
+            'created_at': 'created_at',    # En eski açılan
+            'current_price': 'current_price',  # En düşük fiyat
+            '-current_price': '-current_price', # En yüksek fiyat
+        }
+        if sort_by not in valid_sorts:
+            sort_by = '-created_at'
+        
+        auctions = auctions.order_by(sort_by).prefetch_related('images')
+        return render(request, 'users/dashboard.html', {
+            'auctions': auctions,
+            'search_query': q,
+            'min_starting_price': min_start,
+            'max_starting_price': max_start,
+            'min_current_price': min_current,
+            'max_current_price': max_current,
+            'sort_by': sort_by,
+        })
+    else:
+        # İzin yok - hata mesajı göster
+        return render(request, 'users/dashboard.html', {
+            'permission_error': True,
+        })
+
 
 # --- GRUP İŞLEMLERİ ---
 @menu_permission_required("users:group_permissions")

@@ -30,9 +30,9 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-1">
-                    {% if user.is_authenticated %}
+                    {% if user.is_authenticated and 'auctions:create' in user_menu_names and 'users:admin_dashboard' not in user_menu_names %}
                     <li class="nav-item">
-                        <a class="nav-link text-white-50" href="{% url 'users:dashboard' %}"><i class="bi bi-grid-1x2-fill me-1"></i>İhaleler</a>
+                        <a class="nav-link text-white-50" href="{% url 'auctions:create' %}"><i class="bi bi-plus-lg me-1"></i>İhale Oluştur</a>
                     </li>
                     {% endif %}
                 </ul>

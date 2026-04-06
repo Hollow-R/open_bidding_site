@@ -72,32 +72,32 @@
                     </p>
 
                     {% with imgs=auction.images.all pdfs=auction.specification_files.all %}
-                    {% if imgs %}
-                    <p class="section-label mb-2">Görseller</p>
-                    <div class="auction-gallery mb-4" role="region" aria-label="İhale görselleri">
-                        {% for gi in imgs %}
-                        <img src="{{ gi.image.url }}" alt="{{ auction.title }} — görsel {{ forloop.counter }}">
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-
-                    <p class="lead text-secondary mb-4" style="font-size:1.05rem;line-height:1.65;">{{ auction.description }}</p>
-
-                    {% if pdfs %}
-                    <p class="section-label mb-2">Şartname (PDF)</p>
-                    <div class="pdf-viewers-row mb-2" role="region" aria-label="Şartname PDF önizlemeleri">
-                        {% for spec in pdfs %}
-                        <div class="pdf-viewer-card flex-shrink-0 border bg-white p-3 shadow-sm"
-                             data-pdf-url="{{ spec.file.url }}">
-                            <div class="small text-muted mb-2 fw-medium">Şartname {{ forloop.counter }}</div>
-                            <div class="pdf-pages"></div>
-                            <a href="{{ spec.file.url }}" class="btn btn-sm btn-outline-primary mt-2 w-100 rounded-pill" download>
-                                <i class="bi bi-download me-1"></i>PDF indir
-                            </a>
+                        {% if imgs %}
+                        <p class="section-label mb-2">Görseller</p>
+                        <div class="auction-gallery mb-4" role="region" aria-label="İhale görselleri">
+                            {% for gi in imgs %}
+                            <img src="{{ gi.image.url }}" class="img-fluid" loading="lazy" alt="{{ auction.title }} — görsel {{ forloop.counter }}">
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
+                        {% endif %}
+
+                        <p class="lead text-secondary mb-4" style="font-size:1.05rem;line-height:1.65;">{{ auction.description }}</p>
+
+                        {% if pdfs %}
+                        <p class="section-label mb-2">Şartname (PDF)</p>
+                        <div class="pdf-viewers-row mb-2" role="region" aria-label="Şartname PDF önizlemeleri">
+                            {% for spec in pdfs %}
+                            <div class="pdf-viewer-card flex-shrink-0 border bg-white p-3 shadow-sm"
+                                 data-pdf-url="{{ spec.file.url }}">
+                                <div class="small text-muted mb-2 fw-medium">Şartname {{ forloop.counter }}</div>
+                                <div class="pdf-pages"></div>
+                                <a href="{{ spec.file.url }}" class="btn btn-sm btn-outline-primary mt-2 w-100 rounded-pill" download>
+                                    <i class="bi bi-download me-1"></i>PDF indir
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                     {% endwith %}
                 </div>
             </div>
@@ -121,8 +121,13 @@
                             <div class="mb-3">
                                 <label class="form-label fw-medium">Yeni teklif tutarı (TL)</label>
                                 {{ form.amount }}
+                                {% if form.amount.errors %}
+                                    {% for error in form.amount.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
                                 <div class="form-text small">
-                                    Mevcut: <strong>{{ auction.current_price }} TL</strong>. Bir sonraki teklif en az <strong>{{ min_next_bid }} TL</strong> olmalıdır.
+                                    Mevcut: <strong>{{ auction.current_price }} TL</strong> (KDV dahil: {{ auction.current_price_with_vat }} TL). Bir sonraki teklif en az <strong>{{ min_next_bid }} TL</strong> olmalıdır.
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-semibold">Teklifi gönder</button>
@@ -139,8 +144,8 @@
 
             <div class="info-strip mb-4">
                 <div class="d-flex flex-column gap-2">
-                    <span><strong>Başlangıç:</strong> {{ auction.starting_price }} TL</span>
-                    <span><strong>Güncel en yüksek:</strong> {{ auction.current_price }} TL</span>
+                    <span><strong>Başlangıç:</strong> {{ auction.starting_price }} TL <small class="text-muted">(KDV dahil: {{ auction.starting_price_with_vat }} TL)</small></span>
+                    <span><strong>Güncel en yüksek:</strong> {{ auction.current_price }} TL <small class="text-muted">(KDV dahil: {{ auction.current_price_with_vat }} TL)</small></span>
                 </div>
             </div>
 
@@ -224,6 +229,7 @@
         btn.addEventListener('click', function () {
             var url = btn.getAttribute('data-url');
             if (!url) return;
+            btn.disabled = true;
             fetch(url, {
                 method: 'POST',
                 headers: {
@@ -238,7 +244,10 @@
                     icon.className = data.watched ? 'bi bi-eye-fill' : 'bi bi-eye';
                 }
                 btn.setAttribute('data-watched', data.watched ? 'true' : 'false');
-            }).catch(function () {});
+            }).catch(function () {
+            }).finally(function () {
+                btn.disabled = false;
+            });
         });
     });
 })();

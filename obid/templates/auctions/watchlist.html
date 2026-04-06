@@ -16,7 +16,7 @@
                 <div class="card-img-wrap">
                     {% with first_g=auction.images.first %}
                     {% if first_g %}
-                        <img src="{{ first_g.image.url }}" class="card-img-top w-100" alt="{{ auction.title }}">
+                        <img src="{{ first_g.image.url }}" class="card-img-top w-100 img-fluid" loading="lazy" alt="{{ auction.title }}">
                     {% else %}
                         <div class="card-img-placeholder w-100"><i class="bi bi-image me-2"></i>Görsel yok</div>
                     {% endif %}
